@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "계획하세요. 읽으세요. 들으세요. 집중하세요."
+  },
+  "navigation": {
+    "home": "홈",
+    "planner": "플래너",
+    "reader": "리더",
+    "player": "플레이어",
+    "settings": "설정"
+  },
+  "common": {
+    "close": "닫기",
+    "dark": "다크",
+    "light": "라이트",
+    "loading": "로딩 중...",
+    "noBooks": "책 없음",
+    "noTasks": "할 일 없음",
+    "oled": "OLED",
+    "reset": "초기화",
+    "sepia": "세피아",
+    "tasks": "할 일",
+    "viewAll": "모두 보기"
+  },
+  "planner": {
+    "title": "플래너",
+    "today": "오늘",
+    "newTask": "새 할 일",
+    "stats": {
+      "completed": "완료"
+    }
+  },
+  "player": {
+    "title": "플레이어",
+    "audio": "오디오",
+    "video": "비디오",
+    "musicLibrary": "미디어 라이브러리",
+    "importMedia": "미디어 가져오기"
+  },
+  "reader": {
+    "title": "리더",
+    "currentlyReading": "읽는 중",
+    "importBooks": "책 가져오기"
+  },
+  "settings": {
+    "title": "설정",
+    "language": "언어",
+    "theme": "테마",
+    "resetDesc": "모든 설정을 기본값으로 초기화"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Planifică. Citește. Ascultă. Fără distrageri."
+  },
+  "navigation": {
+    "home": "Acasă",
+    "planner": "Planificator",
+    "reader": "Cititor",
+    "player": "Player",
+    "settings": "Setări"
+  },
+  "common": {
+    "close": "Închide",
+    "dark": "Întunecat",
+    "light": "Luminos",
+    "loading": "Se încarcă...",
+    "noBooks": "Nicio carte",
+    "noTasks": "Nicio sarcină",
+    "oled": "OLED",
+    "reset": "Resetează",
+    "sepia": "Sepia",
+    "tasks": "sarcini",
+    "viewAll": "Vezi tot"
+  },
+  "planner": {
+    "title": "Planificator",
+    "today": "Astăzi",
+    "newTask": "Sarcină nouă",
+    "stats": {
+      "completed": "Finalizat"
+    }
+  },
+  "player": {
+    "title": "Player",
+    "audio": "Audio",
+    "video": "Video",
+    "musicLibrary": "Bibliotecă media",
+    "importMedia": "Importă media"
+  },
+  "reader": {
+    "title": "Cititor",
+    "currentlyReading": "citit acum",
+    "importBooks": "Importă cărți"
+  },
+  "settings": {
+    "title": "Setări",
+    "language": "Limbă",
+    "theme": "Temă",
+    "resetDesc": "Resetează toate setările la valorile implicite"
+  }
+}

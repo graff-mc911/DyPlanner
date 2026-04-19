@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Calendar, BookOpen, Music, ArrowRight, Clock, CheckCircle2 } from 'lucide-react'
 import { Card } from '../common/Card'
 import { Button } from '../common/Button'
-import { usePlannerStore } from '../../stores/plannerStore'
-import { useBookStore } from '../../stores/bookStore'
+import { usePlannerStore } from '../stores/plannerStore'
+import { useBookStore } from '../stores/bookStore'
 
 export function HomePage() {
   const { t } = useTranslation()
@@ -37,13 +37,12 @@ export function HomePage() {
       title: t('navigation.player'),
       desc: t('player.musicLibrary'),
       path: '/player',
-      color: 'bg-violet-500',
+      color: 'bg-sky-500',
     },
   ]
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-100">DyPlanner Universal</h1>
@@ -55,9 +54,8 @@ export function HomePage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {QuickActions.map((action) => {
+        {quickActions.map((action) => {
           const Icon = action.icon
           return (
             <Card
@@ -82,7 +80,6 @@ export function HomePage() {
         })}
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <div className="flex items-center gap-3">
@@ -122,26 +119,25 @@ export function HomePage() {
 
         <Card>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
-              <Music className="text-violet-500" size={20} />
+            <div className="w-10 h-10 rounded-lg bg-sky-500/10 flex items-center justify-center">
+              <Music className="text-sky-500" size={20} />
             </div>
             <div>
-              <p className="text-sm text-slate-400">{t('player.title')}</P>
+              <p className="text-sm text-slate-400">{t('player.title')}</p>
               <p className="text-2xl font-bold text-slate-100">-</p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Today's Tasks */}
       <Card className="lg:col-span-2">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="Font-semibold text-slate-100">{t('planner.today')}</h3>
+          <h3 className="font-semibold text-slate-100">{t('planner.today')}</h3>
           <Button variant="ghost" size="sm" onClick={() => navigate('/planner')}>
             {t('common.viewAll')}
           </Button>
         </div>
-        
+
         {todayTasks.length === 0 ? (
           <div className="text-center py-8 text-slate-500">
             <p>{t('common.noTasks')}</p>
@@ -152,7 +148,7 @@ export function HomePage() {
         ) : (
           <div className="space-y-2">
             {todayTasks.slice(0, 5).map((task) => (
-              <div key={Task.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50">
+              <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-800/50">
                 <div className={`w-2 h-2 rounded-full ${
                   task.priority === 'urgent' ? 'bg-red-500' :
                   task.priority === 'high' ? 'bg-orange-500' :

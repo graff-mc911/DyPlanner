@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Tervezz. Olvass. Hallgass. Figyelemelterelés nélkül."
+  },
+  "navigation": {
+    "home": "Főoldal",
+    "planner": "Tervező",
+    "reader": "Olvasó",
+    "player": "Lejátszó",
+    "settings": "Beállítások"
+  },
+  "common": {
+    "close": "Bezárás",
+    "dark": "Sötét",
+    "light": "Világos",
+    "loading": "Betöltés...",
+    "noBooks": "Nincs könyv",
+    "noTasks": "Nincs feladat",
+    "oled": "OLED",
+    "reset": "Visszaállítás",
+    "sepia": "Szépia",
+    "tasks": "feladat",
+    "viewAll": "Összes megtekintése"
+  },
+  "planner": {
+    "title": "Tervező",
+    "today": "Ma",
+    "newTask": "Új feladat",
+    "stats": {
+      "completed": "Befejezve"
+    }
+  },
+  "player": {
+    "title": "Lejátszó",
+    "audio": "Hang",
+    "video": "Videó",
+    "musicLibrary": "Médiakönyvtár",
+    "importMedia": "Média importálása"
+  },
+  "reader": {
+    "title": "Olvasó",
+    "currentlyReading": "éppen olvasva",
+    "importBooks": "Könyvek importálása"
+  },
+  "settings": {
+    "title": "Beállítások",
+    "language": "Nyelv",
+    "theme": "Téma",
+    "resetDesc": "Összes beállítás visszaállítása az alapértékekre"
+  }
+}

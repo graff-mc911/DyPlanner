@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Planera. Läs. Lyssna. Utan distraktioner."
+  },
+  "navigation": {
+    "home": "Hem",
+    "planner": "Planerare",
+    "reader": "Läsare",
+    "player": "Spelare",
+    "settings": "Inställningar"
+  },
+  "common": {
+    "close": "Stäng",
+    "dark": "Mörkt",
+    "light": "Ljust",
+    "loading": "Laddar...",
+    "noBooks": "Inga böcker",
+    "noTasks": "Inga uppgifter",
+    "oled": "OLED",
+    "reset": "Återställ",
+    "sepia": "Sepia",
+    "tasks": "uppgifter",
+    "viewAll": "Visa alla"
+  },
+  "planner": {
+    "title": "Planerare",
+    "today": "Idag",
+    "newTask": "Ny uppgift",
+    "stats": {
+      "completed": "Slutfört"
+    }
+  },
+  "player": {
+    "title": "Spelare",
+    "audio": "Ljud",
+    "video": "Video",
+    "musicLibrary": "Mediebibliotek",
+    "importMedia": "Importera media"
+  },
+  "reader": {
+    "title": "Läsare",
+    "currentlyReading": "läses just nu",
+    "importBooks": "Importera böcker"
+  },
+  "settings": {
+    "title": "Inställningar",
+    "language": "Språk",
+    "theme": "Tema",
+    "resetDesc": "Återställ alla inställningar till standardvärden"
+  }
+}

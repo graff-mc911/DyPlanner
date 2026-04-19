@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "خطط. اقرأ. استمع. بدون تشتيت."
+  },
+  "navigation": {
+    "home": "الرئيسية",
+    "planner": "المخطط",
+    "reader": "القارئ",
+    "player": "المشغل",
+    "settings": "الإعدادات"
+  },
+  "common": {
+    "close": "إغلاق",
+    "dark": "داكن",
+    "light": "فاتح",
+    "loading": "جار التحميل...",
+    "noBooks": "لا توجد كتب",
+    "noTasks": "لا توجد مهام",
+    "oled": "OLED",
+    "reset": "إعادة تعيين",
+    "sepia": "سيبيا",
+    "tasks": "مهام",
+    "viewAll": "عرض الكل"
+  },
+  "planner": {
+    "title": "المخطط",
+    "today": "اليوم",
+    "newTask": "مهمة جديدة",
+    "stats": {
+      "completed": "مكتمل"
+    }
+  },
+  "player": {
+    "title": "المشغل",
+    "audio": "صوت",
+    "video": "فيديو",
+    "musicLibrary": "مكتبة الوسائط",
+    "importMedia": "استيراد الوسائط"
+  },
+  "reader": {
+    "title": "القارئ",
+    "currentlyReading": "يُقرأ الآن",
+    "importBooks": "استيراد الكتب"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "language": "اللغة",
+    "theme": "المظهر",
+    "resetDesc": "إعادة تعيين جميع الإعدادات إلى قيمها الافتراضية"
+  }
+}

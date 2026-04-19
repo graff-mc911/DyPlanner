@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Plánuj. Čti. Poslouchej. Bez rozptýlení."
+  },
+  "navigation": {
+    "home": "Domů",
+    "planner": "Plánovač",
+    "reader": "Čtečka",
+    "player": "Přehrávač",
+    "settings": "Nastavení"
+  },
+  "common": {
+    "close": "Zavřít",
+    "dark": "Tmavý",
+    "light": "Světlý",
+    "loading": "Načítání...",
+    "noBooks": "Žádné knihy",
+    "noTasks": "Žádné úkoly",
+    "oled": "OLED",
+    "reset": "Obnovit",
+    "sepia": "Sépiový",
+    "tasks": "úkolů",
+    "viewAll": "Zobrazit vše"
+  },
+  "planner": {
+    "title": "Plánovač",
+    "today": "Dnes",
+    "newTask": "Nový úkol",
+    "stats": {
+      "completed": "Dokončeno"
+    }
+  },
+  "player": {
+    "title": "Přehrávač",
+    "audio": "Zvuk",
+    "video": "Video",
+    "musicLibrary": "Mediální knihovna",
+    "importMedia": "Importovat média"
+  },
+  "reader": {
+    "title": "Čtečka",
+    "currentlyReading": "aktuálně čteno",
+    "importBooks": "Importovat knihy"
+  },
+  "settings": {
+    "title": "Nastavení",
+    "language": "Jazyk",
+    "theme": "Vzhled",
+    "resetDesc": "Obnovit všechna nastavení na výchozí hodnoty"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Плануй. Читай. Слухай. Без зайвого."
+  },
+  "navigation": {
+    "home": "Головна",
+    "planner": "Планер",
+    "reader": "Читачка",
+    "player": "Плеєр",
+    "settings": "Налаштування"
+  },
+  "common": {
+    "close": "Закрити",
+    "dark": "Темна",
+    "light": "Світла",
+    "loading": "Завантаження...",
+    "noBooks": "Немає книг",
+    "noTasks": "Немає завдань",
+    "oled": "OLED",
+    "reset": "Скинути",
+    "sepia": "Сепія",
+    "tasks": "завдань",
+    "viewAll": "Переглянути всі"
+  },
+  "planner": {
+    "title": "Планер",
+    "today": "Сьогодні",
+    "newTask": "Нове завдання",
+    "stats": {
+      "completed": "Виконано"
+    }
+  },
+  "player": {
+    "title": "Плеєр",
+    "audio": "Аудіо",
+    "video": "Відео",
+    "musicLibrary": "Медіатека",
+    "importMedia": "Імпортувати медіа"
+  },
+  "reader": {
+    "title": "Читачка",
+    "currentlyReading": "читається зараз",
+    "importBooks": "Імпортувати книги"
+  },
+  "settings": {
+    "title": "Налаштування",
+    "language": "Мова",
+    "theme": "Тема",
+    "resetDesc": "Скинути всі налаштування до стандартних значень"
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Planen. Lesen. Hören. Ohne Ablenkung."
+  },
+  "navigation": {
+    "home": "Startseite",
+    "planner": "Planer",
+    "reader": "Leser",
+    "player": "Player",
+    "settings": "Einstellungen"
+  },
+  "common": {
+    "close": "Schließen",
+    "dark": "Dunkel",
+    "light": "Hell",
+    "loading": "Laden...",
+    "noBooks": "Keine Bücher",
+    "noTasks": "Keine Aufgaben",
+    "oled": "OLED",
+    "reset": "Zurücksetzen",
+    "sepia": "Sepia",
+    "tasks": "Aufgaben",
+    "viewAll": "Alle anzeigen"
+  },
+  "planner": {
+    "title": "Planer",
+    "today": "Heute",
+    "newTask": "Neue Aufgabe",
+    "stats": {
+      "completed": "Abgeschlossen"
+    }
+  },
+  "player": {
+    "title": "Player",
+    "audio": "Audio",
+    "video": "Video",
+    "musicLibrary": "Mediathek",
+    "importMedia": "Medien importieren"
+  },
+  "reader": {
+    "title": "Leser",
+    "currentlyReading": "wird gelesen",
+    "importBooks": "Bücher importieren"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "theme": "Design",
+    "resetDesc": "Alle Einstellungen auf Standardwerte zurücksetzen"
+  }
+}

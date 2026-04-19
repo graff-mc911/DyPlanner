@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "योजना बनाएं। पढ़ें। सुनें। बिना विचलन के।"
+  },
+  "navigation": {
+    "home": "होम",
+    "planner": "प्लानर",
+    "reader": "रीडर",
+    "player": "प्लेयर",
+    "settings": "सेटिंग्स"
+  },
+  "common": {
+    "close": "बंद करें",
+    "dark": "डार्क",
+    "light": "लाइट",
+    "loading": "लोड हो रहा है...",
+    "noBooks": "कोई किताब नहीं",
+    "noTasks": "कोई कार्य नहीं",
+    "oled": "OLED",
+    "reset": "रीसेट",
+    "sepia": "सेपिया",
+    "tasks": "कार्य",
+    "viewAll": "सभी देखें"
+  },
+  "planner": {
+    "title": "प्लानर",
+    "today": "आज",
+    "newTask": "नया कार्य",
+    "stats": {
+      "completed": "पूर्ण"
+    }
+  },
+  "player": {
+    "title": "प्लेयर",
+    "audio": "ऑडियो",
+    "video": "वीडियो",
+    "musicLibrary": "मीडिया लाइब्रेरी",
+    "importMedia": "मीडिया आयात करें"
+  },
+  "reader": {
+    "title": "रीडर",
+    "currentlyReading": "अभी पढ़ा जा रहा है",
+    "importBooks": "किताबें आयात करें"
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "language": "भाषा",
+    "theme": "थीम",
+    "resetDesc": "सभी सेटिंग्स को डिफ़ॉल्ट मानों पर रीसेट करें"
+  }
+}

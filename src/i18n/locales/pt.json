@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Planeje. Leia. Ouça. Sem distrações."
+  },
+  "navigation": {
+    "home": "Início",
+    "planner": "Planejador",
+    "reader": "Leitor",
+    "player": "Reprodutor",
+    "settings": "Configurações"
+  },
+  "common": {
+    "close": "Fechar",
+    "dark": "Escuro",
+    "light": "Claro",
+    "loading": "Carregando...",
+    "noBooks": "Sem livros",
+    "noTasks": "Sem tarefas",
+    "oled": "OLED",
+    "reset": "Redefinir",
+    "sepia": "Sépia",
+    "tasks": "tarefas",
+    "viewAll": "Ver tudo"
+  },
+  "planner": {
+    "title": "Planejador",
+    "today": "Hoje",
+    "newTask": "Nova tarefa",
+    "stats": {
+      "completed": "Concluído"
+    }
+  },
+  "player": {
+    "title": "Reprodutor",
+    "audio": "Áudio",
+    "video": "Vídeo",
+    "musicLibrary": "Biblioteca de mídia",
+    "importMedia": "Importar mídia"
+  },
+  "reader": {
+    "title": "Leitor",
+    "currentlyReading": "lendo agora",
+    "importBooks": "Importar livros"
+  },
+  "settings": {
+    "title": "Configurações",
+    "language": "Idioma",
+    "theme": "Tema",
+    "resetDesc": "Redefinir todas as configurações para os valores padrão"
+  }
+}

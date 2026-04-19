@@ -14,6 +14,7 @@ interface BookState {
   setCurrentBook: (book: Book | null) => void
   updateProgress: (id: UUID, progress: number, currentPage: number) => void
   getBooksByStatus: (status: 'reading' | 'finished' | 'unread') => Book[]
+  getStats: () => { reading: number; finished: number; unread: number; total: number }
   updateSettings: (settings: Partial<ReaderSettings>) => void
 }
 
@@ -91,6 +92,16 @@ export const useBookStore = create<BookState>()(
         }
       },
       
+      getStats: () => {
+        const { books } = get()
+        return {
+          reading: books.filter((b) => b.progress > 0 && b.progress < 100).length,
+          finished: books.filter((b) => b.progress === 100).length,
+          unread: books.filter((b) => b.progress === 0).length,
+          total: books.length,
+        }
+      },
+
       updateSettings: (newSettings) => {
         set((state) => ({ settings: { ...state.settings, ...newSettings } }))
       },

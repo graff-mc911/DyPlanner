@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Plan. Lees. Luister. Zonder afleiding."
+  },
+  "navigation": {
+    "home": "Startpagina",
+    "planner": "Planner",
+    "reader": "Lezer",
+    "player": "Speler",
+    "settings": "Instellingen"
+  },
+  "common": {
+    "close": "Sluiten",
+    "dark": "Donker",
+    "light": "Licht",
+    "loading": "Laden...",
+    "noBooks": "Geen boeken",
+    "noTasks": "Geen taken",
+    "oled": "OLED",
+    "reset": "Resetten",
+    "sepia": "Sepia",
+    "tasks": "taken",
+    "viewAll": "Alles bekijken"
+  },
+  "planner": {
+    "title": "Planner",
+    "today": "Vandaag",
+    "newTask": "Nieuwe taak",
+    "stats": {
+      "completed": "Voltooid"
+    }
+  },
+  "player": {
+    "title": "Speler",
+    "audio": "Audio",
+    "video": "Video",
+    "musicLibrary": "Mediabibliotheek",
+    "importMedia": "Media importeren"
+  },
+  "reader": {
+    "title": "Lezer",
+    "currentlyReading": "momenteel aan het lezen",
+    "importBooks": "Boeken importeren"
+  },
+  "settings": {
+    "title": "Instellingen",
+    "language": "Taal",
+    "theme": "Thema",
+    "resetDesc": "Alle instellingen terugzetten naar standaardwaarden"
+  }
+}

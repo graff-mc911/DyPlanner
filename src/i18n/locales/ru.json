@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Планируй. Читай. Слушай. Без отвлечений."
+  },
+  "navigation": {
+    "home": "Главная",
+    "planner": "Планировщик",
+    "reader": "Читалка",
+    "player": "Плеер",
+    "settings": "Настройки"
+  },
+  "common": {
+    "close": "Закрыть",
+    "dark": "Тёмная",
+    "light": "Светлая",
+    "loading": "Загрузка...",
+    "noBooks": "Нет книг",
+    "noTasks": "Нет задач",
+    "oled": "OLED",
+    "reset": "Сбросить",
+    "sepia": "Сепия",
+    "tasks": "задач",
+    "viewAll": "Смотреть все"
+  },
+  "planner": {
+    "title": "Планировщик",
+    "today": "Сегодня",
+    "newTask": "Новая задача",
+    "stats": {
+      "completed": "Выполнено"
+    }
+  },
+  "player": {
+    "title": "Плеер",
+    "audio": "Аудио",
+    "video": "Видео",
+    "musicLibrary": "Медиатека",
+    "importMedia": "Импортировать медиа"
+  },
+  "reader": {
+    "title": "Читалка",
+    "currentlyReading": "читается сейчас",
+    "importBooks": "Импортировать книги"
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Язык",
+    "theme": "Тема",
+    "resetDesc": "Сбросить все настройки до значений по умолчанию"
+  }
+}

@@ -19,7 +19,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
     @apply bg-slate-950 text-slate-100 antialiased;

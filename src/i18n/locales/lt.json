@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Planuok. Skaityk. Klausyk. Be blaškymosi."
+  },
+  "navigation": {
+    "home": "Pradžia",
+    "planner": "Planuotojas",
+    "reader": "Skaitytuvas",
+    "player": "Grotuvas",
+    "settings": "Nustatymai"
+  },
+  "common": {
+    "close": "Uždaryti",
+    "dark": "Tamsi",
+    "light": "Šviesi",
+    "loading": "Įkeliama...",
+    "noBooks": "Nėra knygų",
+    "noTasks": "Nėra užduočių",
+    "oled": "OLED",
+    "reset": "Atstatyti",
+    "sepia": "Sepija",
+    "tasks": "užduočių",
+    "viewAll": "Rodyti viską"
+  },
+  "planner": {
+    "title": "Planuotojas",
+    "today": "Šiandien",
+    "newTask": "Nauja užduotis",
+    "stats": {
+      "completed": "Atlikta"
+    }
+  },
+  "player": {
+    "title": "Grotuvas",
+    "audio": "Garsas",
+    "video": "Vaizdo įrašas",
+    "musicLibrary": "Medijų biblioteka",
+    "importMedia": "Importuoti mediją"
+  },
+  "reader": {
+    "title": "Skaitytuvas",
+    "currentlyReading": "šiuo metu skaitoma",
+    "importBooks": "Importuoti knygas"
+  },
+  "settings": {
+    "title": "Nustatymai",
+    "language": "Kalba",
+    "theme": "Tema",
+    "resetDesc": "Atstatyti visus nustatymus į numatytąsias vertes"
+  }
+}

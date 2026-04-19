@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Planla. Oku. Dinle. Dikkat dağıtmadan."
+  },
+  "navigation": {
+    "home": "Ana Sayfa",
+    "planner": "Planlayıcı",
+    "reader": "Okuyucu",
+    "player": "Oynatıcı",
+    "settings": "Ayarlar"
+  },
+  "common": {
+    "close": "Kapat",
+    "dark": "Koyu",
+    "light": "Açık",
+    "loading": "Yükleniyor...",
+    "noBooks": "Kitap yok",
+    "noTasks": "Görev yok",
+    "oled": "OLED",
+    "reset": "Sıfırla",
+    "sepia": "Sepya",
+    "tasks": "görev",
+    "viewAll": "Tümünü gör"
+  },
+  "planner": {
+    "title": "Planlayıcı",
+    "today": "Bugün",
+    "newTask": "Yeni görev",
+    "stats": {
+      "completed": "Tamamlandı"
+    }
+  },
+  "player": {
+    "title": "Oynatıcı",
+    "audio": "Ses",
+    "video": "Video",
+    "musicLibrary": "Medya kütüphanesi",
+    "importMedia": "Medya içe aktar"
+  },
+  "reader": {
+    "title": "Okuyucu",
+    "currentlyReading": "şu an okunuyor",
+    "importBooks": "Kitap içe aktar"
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "language": "Dil",
+    "theme": "Tema",
+    "resetDesc": "Tüm ayarları varsayılan değerlerine sıfırla"
+  }
+}

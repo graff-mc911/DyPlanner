@@ -1,82 +1,95 @@
-import i18n from 'i18next'
-import { initReactI18next } from 'react-i18next'
-import LanguageDetector from 'i18next-browser-languagedetector'
-import type { Language, LanguageCode } from '../types'
+export type UUID = string
 
-// Список всіх 24 мов
-export const languages: Language[] = [
-  { code: 'uk', name: 'Ukrainian', nativeName: 'Українська', flag: '🇺🇦', direction: 'ltr' },
-  { code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧', direction: 'ltr' },
-  { code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', direction: 'ltr' },
-  { code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷', direction: 'ltr' },
-  { code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', direction: 'ltr' },
-  { code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹', direction: 'ltr' },
-  { code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹', direction: 'ltr' },
-  { code: 'pl', name: 'Polish', nativeName: 'Polski', flag: '🇵🇱', direction: 'ltr' },
-  { code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺', direction: 'ltr' },
-  { code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵', direction: 'ltr' },
-  { code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳', direction: 'ltr' },
-  { code: 'ko', name: 'Korean', nativeName: '한국어', flag: '🇰🇷', direction: 'ltr' },
-  { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', direction: 'rtl' },
-  { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳', direction: 'ltr' },
-  { code: 'tr', name: 'Turkish', nativeName: 'Türkçe', flag: '🇹🇷', direction: 'ltr' },
-  { code: 'nl', name: 'Dutch', nativeName: 'Nederlands', flag: '🇳🇱', direction: 'ltr' },
-  { code: 'sv', name: 'Swedish', nativeName: 'Svenska', flag: '🇸🇪', direction: 'ltr' },
-  { code: 'cs', name: 'Czech', nativeName: 'Čeština', flag: '🇨🇿', direction: 'ltr' },
-  { code: 'ro', name: 'Romanian', nativeName: 'Română', flag: '🇷🇴', direction: 'ltr' },
-  { code: 'hu', name: 'Hungarian', nativeName: 'Magyar', flag: '🇭🇺', direction: 'ltr' },
-  { code: 'bg', name: 'Bulgarian', nativeName: 'Български', flag: '🇧🇬', direction: 'ltr' },
-  { code: 'hr', name: 'Croatian', nativeName: 'Hrvatski', flag: '🇭🇷', direction: 'ltr' },
-  { code: 'sk', name: 'Slovak', nativeName: 'Slovenčina', flag: '🇸🇰', direction: 'ltr' },
-  { code: 'lt', name: 'Lithuanian', nativeName: 'Lietuvių', flag: '🇱🇹', direction: 'ltr' },
-]
+export type LanguageCode =
+  | 'uk' | 'en' | 'es' | 'fr' | 'de' | 'it' | 'pt' | 'pl' | 'ru'
+  | 'ja' | 'zh' | 'ko' | 'ar' | 'hi' | 'tr' | 'nl' | 'sv' | 'cs'
+  | 'ro' | 'hu' | 'bg' | 'hr' | 'sk' | 'lt'
 
-// Ресурси перекладів (будуть завантажуватися динамічно)
-const resources = {
-  uk: { translation: { loading: 'Завантаження...' } },
-  en: { translation: { loading: 'Loading...' } },
-  es: { translation: { loading: 'Cargando...' } },
-  fr: { translation: { loading: 'Chargement...' } },
-  de: { translation: { loading: 'Laden...' } }
-    it: { translation: { loading: 'Caricamento...' } },
-  pt: { translation: { loading: 'Carregando...' } },
-  pl: { translation: { loading: 'Ładowanie...' } },
-  ru: { translation: { loading: 'Загрузка...' } },
-  ja: { translation: { loading: '読み込み中...' } },
-  zh: { translation: { loading: '加载中...' } },
-  ko: { translation: { loading: '로딩 중...' } },
-  ar: { translation: { loading: 'جار التحميل...' } },
-  hi: { translation: { loading: 'लोड हो रहा है...' } },
-  tr: { translation: { loading: 'Yükleniyor...' } },
-  nl: { translation: { loading: 'Laden...' } },
-  sv: { translation: { loading: 'Laddar...' } },
-  cs: { translation: { loading: 'Načítání...' } },
-  ro: { translation: { loading: 'Încărcare...' } },
-  hu: { translation: { loading: 'Betöltés...' } },
-  bg: { translation: { loading: 'Зареждане...' } },
-  hr: { translation: { loading: 'Učitavanje...' } },
-  sk: { translation: { loading: 'Načítava sa...' } },
-  lt: { translation: { loading: 'Įkeliama...' } },
+export type Theme = 'light' | 'dark' | 'oled' | 'sepia'
+
+export type TaskStatus = 'todo' | 'in-progress' | 'done'
+
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+export interface Language {
+  code: LanguageCode
+  name: string
+  nativeName: string
+  flag: string
+  direction: 'ltr' | 'rtl'
 }
 
-export const supportedLngs: LanguageCode[] = languages.map(l => l.code)
+export interface Task {
+  id: UUID
+  title: string
+  description?: string
+  status: TaskStatus
+  priority: TaskPriority
+  dueDate?: Date
+  createdAt: Date
+  updatedAt: Date
+  completedAt?: Date
+  subtasks: Task[]
+  tags: string[]
+}
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    supportedLngs,
-    fallbackLng: 'uk',
-    debug: false,
-    interpolation: { escapeValue: false },
-    detection: {
-      order: ['localStorage', 'navigator', 'htmlTag'],
-      caches: ['localStorage'],
-    },
-    react: { useSuspense: false },
-  })
+export interface Bookmark {
+  id: UUID
+  page: number
+  title: string
+  createdAt: Date
+}
 
-export default i18n
-export const changeLanguage = (lng: LanguageCode) => i18n.changeLanguage(lng)
-export const getCurrentLanguage = () => i18n.language as LanguageCode
+export interface Annotation {
+  id: UUID
+  page: number
+  text: string
+  note?: string
+  color: string
+  createdAt: Date
+}
+
+export interface Book {
+  id: UUID
+  title: string
+  author: string
+  format: 'pdf' | 'epub' | 'txt' | 'fb2'
+  size: number
+  currentPage: number
+  progress: number
+  createdAt: Date
+  updatedAt: Date
+  lastReadAt?: Date
+  tags: string[]
+  favorite: boolean
+  bookmarks: Bookmark[]
+  annotations: Annotation[]
+}
+
+export interface ReaderSettings {
+  fontSize: number
+  fontFamily: 'sans' | 'serif' | 'mono'
+  lineHeight: number
+  margins: number
+  textAlign: 'left' | 'center' | 'justify' | 'right'
+  theme: 'dark' | 'light' | 'sepia'
+  brightness: number
+}
+
+export interface AppSettings {
+  language: LanguageCode
+  theme: Theme
+  fontScale: number
+  reader: ReaderSettings
+  player: {
+    autoPlay: boolean
+    volume: number
+    playbackRate: number
+    miniPlayer: boolean
+  }
+  planner: {
+    defaultView: 'day' | 'week' | 'month'
+    startOfWeek: number
+    pomodoroDuration: number
+  }
+}

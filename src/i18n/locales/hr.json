@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Planiraj. Čitaj. Slušaj. Bez ometanja."
+  },
+  "navigation": {
+    "home": "Početna",
+    "planner": "Planer",
+    "reader": "Čitač",
+    "player": "Reproduktor",
+    "settings": "Postavke"
+  },
+  "common": {
+    "close": "Zatvori",
+    "dark": "Tamna",
+    "light": "Svjetla",
+    "loading": "Učitavanje...",
+    "noBooks": "Nema knjiga",
+    "noTasks": "Nema zadataka",
+    "oled": "OLED",
+    "reset": "Poništi",
+    "sepia": "Sepija",
+    "tasks": "zadataka",
+    "viewAll": "Vidi sve"
+  },
+  "planner": {
+    "title": "Planer",
+    "today": "Danas",
+    "newTask": "Novi zadatak",
+    "stats": {
+      "completed": "Završeno"
+    }
+  },
+  "player": {
+    "title": "Reproduktor",
+    "audio": "Zvuk",
+    "video": "Video",
+    "musicLibrary": "Medijska knjižnica",
+    "importMedia": "Uvezi medije"
+  },
+  "reader": {
+    "title": "Čitač",
+    "currentlyReading": "trenutno se čita",
+    "importBooks": "Uvezi knjige"
+  },
+  "settings": {
+    "title": "Postavke",
+    "language": "Jezik",
+    "theme": "Tema",
+    "resetDesc": "Poništi sve postavke na zadane vrijednosti"
+  }
+}

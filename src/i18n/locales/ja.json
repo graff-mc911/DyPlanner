@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "計画する。読む。聴く。集中して。"
+  },
+  "navigation": {
+    "home": "ホーム",
+    "planner": "プランナー",
+    "reader": "リーダー",
+    "player": "プレーヤー",
+    "settings": "設定"
+  },
+  "common": {
+    "close": "閉じる",
+    "dark": "ダーク",
+    "light": "ライト",
+    "loading": "読み込み中...",
+    "noBooks": "本がありません",
+    "noTasks": "タスクがありません",
+    "oled": "OLED",
+    "reset": "リセット",
+    "sepia": "セピア",
+    "tasks": "タスク",
+    "viewAll": "すべて表示"
+  },
+  "planner": {
+    "title": "プランナー",
+    "today": "今日",
+    "newTask": "新しいタスク",
+    "stats": {
+      "completed": "完了"
+    }
+  },
+  "player": {
+    "title": "プレーヤー",
+    "audio": "オーディオ",
+    "video": "ビデオ",
+    "musicLibrary": "メディアライブラリ",
+    "importMedia": "メディアをインポート"
+  },
+  "reader": {
+    "title": "リーダー",
+    "currentlyReading": "読書中",
+    "importBooks": "本をインポート"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "theme": "テーマ",
+    "resetDesc": "すべての設定をデフォルト値にリセット"
+  }
+}

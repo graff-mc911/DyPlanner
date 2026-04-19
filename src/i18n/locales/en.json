@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Plan. Read. Listen. No distractions."
+  },
+  "navigation": {
+    "home": "Home",
+    "planner": "Planner",
+    "reader": "Reader",
+    "player": "Player",
+    "settings": "Settings"
+  },
+  "common": {
+    "close": "Close",
+    "dark": "Dark",
+    "light": "Light",
+    "loading": "Loading...",
+    "noBooks": "No books",
+    "noTasks": "No tasks",
+    "oled": "OLED",
+    "reset": "Reset",
+    "sepia": "Sepia",
+    "tasks": "tasks",
+    "viewAll": "View all"
+  },
+  "planner": {
+    "title": "Planner",
+    "today": "Today",
+    "newTask": "New task",
+    "stats": {
+      "completed": "Completed"
+    }
+  },
+  "player": {
+    "title": "Player",
+    "audio": "Audio",
+    "video": "Video",
+    "musicLibrary": "Media library",
+    "importMedia": "Import media"
+  },
+  "reader": {
+    "title": "Reader",
+    "currentlyReading": "currently reading",
+    "importBooks": "Import books"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "resetDesc": "Reset all settings to their default values"
+  }
+}

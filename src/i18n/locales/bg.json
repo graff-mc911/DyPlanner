@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Планирай. Чети. Слушай. Без разсейване."
+  },
+  "navigation": {
+    "home": "Начало",
+    "planner": "Планер",
+    "reader": "Четец",
+    "player": "Плейър",
+    "settings": "Настройки"
+  },
+  "common": {
+    "close": "Затвори",
+    "dark": "Тъмна",
+    "light": "Светла",
+    "loading": "Зареждане...",
+    "noBooks": "Няма книги",
+    "noTasks": "Няма задачи",
+    "oled": "OLED",
+    "reset": "Нулиране",
+    "sepia": "Сепия",
+    "tasks": "задачи",
+    "viewAll": "Виж всички"
+  },
+  "planner": {
+    "title": "Планер",
+    "today": "Днес",
+    "newTask": "Нова задача",
+    "stats": {
+      "completed": "Завършено"
+    }
+  },
+  "player": {
+    "title": "Плейър",
+    "audio": "Аудио",
+    "video": "Видео",
+    "musicLibrary": "Медийна библиотека",
+    "importMedia": "Импортирай медия"
+  },
+  "reader": {
+    "title": "Четец",
+    "currentlyReading": "в момента се чете",
+    "importBooks": "Импортирай книги"
+  },
+  "settings": {
+    "title": "Настройки",
+    "language": "Език",
+    "theme": "Тема",
+    "resetDesc": "Нулирай всички настройки до стойностите по подразбиране"
+  }
+}

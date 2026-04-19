@@ -1,0 +1,51 @@
+{
+  "app": {
+    "tagline": "Planuj. Czytaj. Słuchaj. Bez rozproszenia."
+  },
+  "navigation": {
+    "home": "Strona główna",
+    "planner": "Planer",
+    "reader": "Czytnik",
+    "player": "Odtwarzacz",
+    "settings": "Ustawienia"
+  },
+  "common": {
+    "close": "Zamknij",
+    "dark": "Ciemny",
+    "light": "Jasny",
+    "loading": "Ładowanie...",
+    "noBooks": "Brak książek",
+    "noTasks": "Brak zadań",
+    "oled": "OLED",
+    "reset": "Resetuj",
+    "sepia": "Sepia",
+    "tasks": "zadań",
+    "viewAll": "Zobacz wszystko"
+  },
+  "planner": {
+    "title": "Planer",
+    "today": "Dzisiaj",
+    "newTask": "Nowe zadanie",
+    "stats": {
+      "completed": "Ukończono"
+    }
+  },
+  "player": {
+    "title": "Odtwarzacz",
+    "audio": "Audio",
+    "video": "Wideo",
+    "musicLibrary": "Biblioteka multimediów",
+    "importMedia": "Importuj multimedia"
+  },
+  "reader": {
+    "title": "Czytnik",
+    "currentlyReading": "aktualnie czytane",
+    "importBooks": "Importuj książki"
+  },
+  "settings": {
+    "title": "Ustawienia",
+    "language": "Język",
+    "theme": "Motyw",
+    "resetDesc": "Zresetuj wszystkie ustawienia do wartości domyślnych"
+  }
+}
