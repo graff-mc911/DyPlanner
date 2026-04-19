@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Timer, CheckSquare, Flame, Grid3x3, Globe, Download } from 'lucide-react';
+import { Timer, CheckSquare, Flame, Grid3x3, Globe } from 'lucide-react';
 import HabitTracker from './components/HabitTracker';
 import DailyPlanner from './components/DailyPlanner';
 import FocusTimer from './components/FocusTimer';
@@ -43,19 +43,6 @@ function App() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-2xl mx-auto h-screen flex flex-col relative">
-        <div className="fixed top-4 left-4 z-40">
-          <motion.a
-            href="/focus-one-backup.zip"
-            download
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/10 rounded-2xl px-4 py-2 transition-all text-white"
-          >
-            <Download className="w-4 h-4" />
-            <span className="text-sm font-medium">Download</span>
-          </motion.a>
-        </div>
-
         <div className="fixed top-4 right-4 z-40">
           <div className="relative">
             <motion.button
