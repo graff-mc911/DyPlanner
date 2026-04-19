@@ -1,25 +1,21 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#FF6B35',
-          hover: '#E85A2A',
+          50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc',
+          400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1',
+          800: '#075985', 900: '#0c4a6e', 950: '#082f49',
         },
-        secondary: {
-          DEFAULT: '#2EC4B6',
-          hover: '#27A99D',
-        },
-        cream: {
-          DEFAULT: '#FFF9F0',
-          50: '#FFFDFB',
-          100: '#FFF9F0',
-        },
-        'dark-gray': '#333333',
-      },
+        slate: { 850: '#1e293b', 900: '#0f172a', 950: '#020617' }
+      }
     },
   },
   plugins: [],
-};
+}
