@@ -38,3 +38,45 @@ const resources = {
   es: { translation: { loading: 'Cargando...' } },
   fr: { translation: { loading: 'Chargement...' } },
   de: { translation: { loading: 'Laden...' } }
+    it: { translation: { loading: 'Caricamento...' } },
+  pt: { translation: { loading: 'Carregando...' } },
+  pl: { translation: { loading: 'Ładowanie...' } },
+  ru: { translation: { loading: 'Загрузка...' } },
+  ja: { translation: { loading: '読み込み中...' } },
+  zh: { translation: { loading: '加载中...' } },
+  ko: { translation: { loading: '로딩 중...' } },
+  ar: { translation: { loading: 'جار التحميل...' } },
+  hi: { translation: { loading: 'लोड हो रहा है...' } },
+  tr: { translation: { loading: 'Yükleniyor...' } },
+  nl: { translation: { loading: 'Laden...' } },
+  sv: { translation: { loading: 'Laddar...' } },
+  cs: { translation: { loading: 'Načítání...' } },
+  ro: { translation: { loading: 'Încărcare...' } },
+  hu: { translation: { loading: 'Betöltés...' } },
+  bg: { translation: { loading: 'Зареждане...' } },
+  hr: { translation: { loading: 'Učitavanje...' } },
+  sk: { translation: { loading: 'Načítava sa...' } },
+  lt: { translation: { loading: 'Įkeliama...' } },
+}
+
+export const supportedLngs: LanguageCode[] = languages.map(l => l.code)
+
+i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    supportedLngs,
+    fallbackLng: 'uk',
+    debug: false,
+    interpolation: { escapeValue: false },
+    detection: {
+      order: ['localStorage', 'navigator', 'htmlTag'],
+      caches: ['localStorage'],
+    },
+    react: { useSuspense: false },
+  })
+
+export default i18n
+export const changeLanguage = (lng: LanguageCode) => i18n.changeLanguage(lng)
+export const getCurrentLanguage = () => i18n.language as LanguageCode
