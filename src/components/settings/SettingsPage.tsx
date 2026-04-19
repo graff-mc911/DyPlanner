@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next'
-import { useSettingsStore } from '../stores/settingsStore'
+import { useSettingsStore } from '../../stores/settingsStore'
 import { Card } from '../common/Card'
 import { Button } from '../common/Button'
-import type { LanguageCode } from '../types'
+import type { LanguageCode } from '../../types'
 
 const ALL_LANGUAGES: { code: LanguageCode; nativeName: string }[] = [
   { code: 'uk', nativeName: 'Українська' },

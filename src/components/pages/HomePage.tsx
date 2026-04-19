@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { Calendar, BookOpen, Music, ArrowRight, Clock, CheckCircle2 } from 'lucide-react'
 import { Card } from '../common/Card'
 import { Button } from '../common/Button'
-import { usePlannerStore } from '../stores/plannerStore'
-import { useBookStore } from '../stores/bookStore'
+import { usePlannerStore } from '../../stores/plannerStore'
+import { useBookStore } from '../../stores/bookStore'
 
 export function HomePage() {
   const { t } = useTranslation()

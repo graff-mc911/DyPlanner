@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
-import { useSettingsStore } from './components/stores/settingsStore'
+import { useSettingsStore } from './stores/settingsStore'
 import { Layout } from './components/layout/Layout'
 import { HomePage } from './components/pages/HomePage'
 import { PlannerPage } from './components/planner/PlannerPage'

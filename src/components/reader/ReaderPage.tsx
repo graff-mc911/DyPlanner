@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Upload, BookOpen } from 'lucide-react'
 import { Button } from '../common/Button'
 import { Card } from '../common/Card'
-import { useBookStore } from '../stores/bookStore'
+import { useBookStore } from '../../stores/bookStore'
 
 export function ReaderPage() {
   const { t } = useTranslation()
