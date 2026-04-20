@@ -1,18 +1,60 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Music, Video, Upload, X, ListMusic } from 'lucide-react';
+import {
+  Play, Pause, SkipBack, SkipForward, Volume2, Music, Video,
+  Upload, X, ListMusic, Youtube, Link, Plus, AlertCircle,
+} from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
-import { saveMedia, loadAllMedia, deleteMedia, StoredMedia } from '../utils/mediaDB';
+import {
+  saveMedia, loadAllMedia, deleteMedia, extractYouTubeId, StoredMedia, MediaSourceType,
+} from '../utils/mediaDB';
 
 interface MediaEntry extends StoredMedia {
-  objectUrl: string;
+  objectUrl?: string;
 }
+
+type AddMode = null | 'youtube' | 'url';
 
 function formatTime(secs: number): string {
   if (!isFinite(secs) || secs < 0) return '0:00';
   const m = Math.floor(secs / 60);
   const s = Math.floor(secs % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function typeIcon(type: MediaSourceType) {
+  if (type === 'youtube') return <Youtube className="w-4 h-4 text-red-400" />;
+  if (type === 'url') return <Link className="w-4 h-4 text-cyan-400" />;
+  if (type === 'video') return <Video className="w-4 h-4 text-pink-400" />;
+  return <Music className="w-4 h-4 text-blue-400" />;
+}
+
+function typeIconBg(type: MediaSourceType) {
+  if (type === 'youtube') return 'bg-red-500/20';
+  if (type === 'url') return 'bg-cyan-500/20';
+  if (type === 'video') return 'bg-pink-500/20';
+  return 'bg-blue-500/20';
+}
+
+declare global {
+  interface Window {
+    YT: {
+      Player: new (el: HTMLElement | string, opts: object) => YTPlayer;
+      PlayerState: { ENDED: number; PLAYING: number; PAUSED: number };
+    };
+    onYouTubeIframeAPIReady?: () => void;
+  }
+}
+
+interface YTPlayer {
+  playVideo(): void;
+  pauseVideo(): void;
+  stopVideo(): void;
+  seekTo(seconds: number, allowSeekAhead?: boolean): void;
+  setVolume(v: number): void;
+  getCurrentTime(): number;
+  getDuration(): number;
+  destroy(): void;
 }
 
 export default function MediaPlayerView() {
@@ -24,40 +66,53 @@ export default function MediaPlayerView() {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(80);
   const [loading, setLoading] = useState(true);
+  const [addMode, setAddMode] = useState<AddMode>(null);
+  const [inputValue, setInputValue] = useState('');
+  const [inputError, setInputError] = useState(false);
 
   const mediaRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null);
+  const ytPlayerRef = useRef<YTPlayer | null>(null);
+  const ytContainerRef = useRef<HTMLDivElement>(null);
+  const ytTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const entriesRef = useRef<MediaEntry[]>([]);
   const currentIdRef = useRef<string | null>(null);
   const volumeRef = useRef(80);
   const audioFileRef = useRef<HTMLInputElement>(null);
   const videoFileRef = useRef<HTMLInputElement>(null);
+  const ytApiReady = useRef(false);
+  const ytApiLoading = useRef(false);
 
   entriesRef.current = entries;
   currentIdRef.current = currentId;
   volumeRef.current = volume;
 
   const current = entries.find(e => e.id === currentId) ?? null;
+  const isYT = current?.type === 'youtube';
 
   useEffect(() => {
     loadAllMedia().then(items => {
-      const loaded = items.map(item => ({
+      const loaded: MediaEntry[] = items.map(item => ({
         ...item,
-        objectUrl: URL.createObjectURL(item.blob),
+        objectUrl: item.blob ? URL.createObjectURL(item.blob) : undefined,
       }));
       setEntries(loaded);
       setLoading(false);
     }).catch(() => setLoading(false));
     return () => {
-      entriesRef.current.forEach(e => URL.revokeObjectURL(e.objectUrl));
+      entriesRef.current.forEach(e => { if (e.objectUrl) URL.revokeObjectURL(e.objectUrl); });
+      if (ytTimerRef.current) clearInterval(ytTimerRef.current);
     };
   }, []);
 
-  const playEntry = useCallback((id: string) => {
-    setCurrentId(id);
-    currentIdRef.current = id;
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
+  const loadYTApi = useCallback(() => {
+    if (ytApiReady.current || ytApiLoading.current) return;
+    ytApiLoading.current = true;
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+    window.onYouTubeIframeAPIReady = () => {
+      ytApiReady.current = true;
+    };
   }, []);
 
   const advanceToNext = useCallback(() => {
@@ -71,8 +126,75 @@ export default function MediaPlayerView() {
       return;
     }
     const next = list[idx + 1];
-    playEntry(next.id);
-  }, [playEntry]);
+    setCurrentId(next.id);
+    currentIdRef.current = next.id;
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+  }, []);
+
+  const destroyYT = useCallback(() => {
+    if (ytTimerRef.current) { clearInterval(ytTimerRef.current); ytTimerRef.current = null; }
+    if (ytPlayerRef.current) { try { ytPlayerRef.current.destroy(); } catch (_) {} ytPlayerRef.current = null; }
+  }, []);
+
+  useEffect(() => {
+    if (!current || current.type !== 'youtube') {
+      destroyYT();
+      return;
+    }
+    if (!current.url) return;
+    const videoId = extractYouTubeId(current.url);
+    if (!videoId) return;
+
+    loadYTApi();
+
+    let cancelled = false;
+    const tryCreate = () => {
+      if (cancelled) return;
+      if (!ytApiReady.current || !window.YT || !ytContainerRef.current) {
+        setTimeout(tryCreate, 200);
+        return;
+      }
+      destroyYT();
+      if (!ytContainerRef.current) return;
+      ytContainerRef.current.innerHTML = '';
+      const div = document.createElement('div');
+      ytContainerRef.current.appendChild(div);
+
+      ytPlayerRef.current = new window.YT.Player(div, {
+        videoId,
+        playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1 },
+        events: {
+          onReady: (e: { target: YTPlayer }) => {
+            if (cancelled) return;
+            e.target.setVolume(volumeRef.current);
+            e.target.playVideo();
+            setIsPlaying(true);
+            ytTimerRef.current = setInterval(() => {
+              if (!ytPlayerRef.current) return;
+              const ct = ytPlayerRef.current.getCurrentTime();
+              const dur = ytPlayerRef.current.getDuration();
+              setCurrentTime(ct);
+              if (dur > 0) setDuration(dur);
+            }, 500);
+          },
+          onStateChange: (e: { data: number }) => {
+            if (cancelled) return;
+            if (e.data === window.YT.PlayerState.PLAYING) setIsPlaying(true);
+            if (e.data === window.YT.PlayerState.PAUSED) setIsPlaying(false);
+            if (e.data === window.YT.PlayerState.ENDED) {
+              setIsPlaying(false);
+              setCurrentTime(0);
+              advanceToNext();
+            }
+          },
+        },
+      });
+    };
+    tryCreate();
+    return () => { cancelled = true; };
+  }, [current?.id, current?.type]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'audio' | 'video') => {
     const fileList = e.target.files;
@@ -86,29 +208,83 @@ export default function MediaPlayerView() {
       await saveMedia(item);
       newEntries.push({ ...item, objectUrl: URL.createObjectURL(blob) });
     }
-    setEntries(prev => {
-      const updated = [...prev, ...newEntries];
-      return updated;
-    });
+    setEntries(prev => [...prev, ...newEntries]);
     if (!currentIdRef.current) {
-      playEntry(newEntries[0].id);
+      setCurrentId(newEntries[0].id);
+      currentIdRef.current = newEntries[0].id;
+      setIsPlaying(false); setCurrentTime(0); setDuration(0);
     }
   };
 
+  const handleAddUrl = async () => {
+    const raw = inputValue.trim();
+    if (!raw) return;
+
+    if (addMode === 'youtube') {
+      const videoId = extractYouTubeId(raw);
+      if (!videoId) { setInputError(true); return; }
+      const id = `yt_${Date.now()}`;
+      const title = raw.length > 50 ? `YouTube: ${videoId}` : `YouTube: ${raw}`;
+      const item: StoredMedia = {
+        id, title, type: 'youtube',
+        url: raw,
+        thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
+      };
+      await saveMedia(item);
+      const entry: MediaEntry = { ...item };
+      setEntries(prev => [...prev, entry]);
+      if (!currentIdRef.current) {
+        setCurrentId(id); currentIdRef.current = id;
+        setIsPlaying(false); setCurrentTime(0); setDuration(0);
+      }
+    } else {
+      try { new URL(raw); } catch { setInputError(true); return; }
+      const id = `url_${Date.now()}`;
+      const name = raw.split('/').pop()?.split('?')[0] || raw;
+      const item: StoredMedia = { id, title: name, type: 'url', url: raw };
+      await saveMedia(item);
+      const entry: MediaEntry = { ...item };
+      setEntries(prev => [...prev, entry]);
+      if (!currentIdRef.current) {
+        setCurrentId(id); currentIdRef.current = id;
+        setIsPlaying(false); setCurrentTime(0); setDuration(0);
+      }
+    }
+    setInputValue('');
+    setInputError(false);
+    setAddMode(null);
+  };
+
+  const selectTrack = useCallback((id: string) => {
+    if (mediaRef.current) mediaRef.current.pause();
+    destroyYT();
+    setCurrentId(id);
+    currentIdRef.current = id;
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+  }, [destroyYT]);
+
   const togglePlay = useCallback(() => {
+    if (isYT && ytPlayerRef.current) {
+      if (isPlaying) ytPlayerRef.current.pauseVideo();
+      else ytPlayerRef.current.playVideo();
+      return;
+    }
     const el = mediaRef.current;
     if (!el) return;
-    if (isPlaying) {
-      el.pause();
-    } else {
-      el.volume = volumeRef.current / 100;
-      el.play().catch(() => {});
-    }
-  }, [isPlaying]);
+    if (isPlaying) el.pause();
+    else { el.volume = volumeRef.current / 100; el.play().catch(() => {}); }
+  }, [isPlaying, isYT]);
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const el = mediaRef.current;
     const val = Number(e.target.value);
+    if (isYT && ytPlayerRef.current) {
+      const dur = ytPlayerRef.current.getDuration();
+      if (dur > 0) { ytPlayerRef.current.seekTo((val / 100) * dur, true); setCurrentTime((val / 100) * dur); }
+      return;
+    }
+    const el = mediaRef.current;
     if (el && isFinite(el.duration)) {
       el.currentTime = (val / 100) * el.duration;
       setCurrentTime(el.currentTime);
@@ -121,27 +297,25 @@ export default function MediaPlayerView() {
     if (!cid || list.length === 0) return;
     const idx = list.findIndex(e => e.id === cid);
     const next = list[(idx + dir + list.length) % list.length];
-    playEntry(next.id);
-  }, [playEntry]);
+    selectTrack(next.id);
+  }, [selectTrack]);
 
   const removeEntry = async (id: string) => {
-    if (mediaRef.current && currentIdRef.current === id) {
-      mediaRef.current.pause();
+    if (currentIdRef.current === id) {
+      if (mediaRef.current) mediaRef.current.pause();
+      destroyYT();
     }
     await deleteMedia(id);
-    setEntries(prev => {
-      const removed = prev.find(e => e.id === id);
-      if (removed) URL.revokeObjectURL(removed.objectUrl);
-      return prev.filter(e => e.id !== id);
-    });
+    const removed = entriesRef.current.find(e => e.id === id);
+    if (removed?.objectUrl) URL.revokeObjectURL(removed.objectUrl);
+    setEntries(prev => prev.filter(e => e.id !== id));
     if (currentId === id) {
       const list = entriesRef.current.filter(e => e.id !== id);
       const idx = entriesRef.current.findIndex(e => e.id === id);
       const next = list[idx] ?? list[idx - 1] ?? null;
       setCurrentId(next?.id ?? null);
-      setIsPlaying(false);
-      setCurrentTime(0);
-      setDuration(0);
+      currentIdRef.current = next?.id ?? null;
+      setIsPlaying(false); setCurrentTime(0); setDuration(0);
     }
   };
 
@@ -149,6 +323,7 @@ export default function MediaPlayerView() {
     setVolume(val);
     volumeRef.current = val;
     if (mediaRef.current) mediaRef.current.volume = val / 100;
+    if (ytPlayerRef.current) ytPlayerRef.current.setVolume(val);
   };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
@@ -172,6 +347,8 @@ export default function MediaPlayerView() {
     };
   }, [advanceToNext]);
 
+  const srcForEntry = (entry: MediaEntry) => entry.objectUrl ?? entry.url ?? '';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
@@ -189,26 +366,85 @@ export default function MediaPlayerView() {
       <input ref={videoFileRef} type="file" accept="video/*" multiple className="hidden"
         onChange={e => handleFileUpload(e, 'video')} />
 
-      <div className="grid grid-cols-2 gap-3 mb-5">
+      <div className="grid grid-cols-4 gap-2 mb-4">
         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           onClick={() => audioFileRef.current?.click()}
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all"
+          className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all"
         >
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
-            <Music className="w-5 h-5 text-blue-400" />
+          <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center">
+            <Music className="w-4 h-4 text-blue-400" />
           </div>
-          <span className="text-sm text-gray-300">{t.player.uploadAudio}</span>
+          <span className="text-xs text-gray-400 text-center leading-tight">{t.player.uploadAudio}</span>
         </motion.button>
         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           onClick={() => videoFileRef.current?.click()}
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-4 flex flex-col items-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all"
+          className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all"
         >
-          <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center">
-            <Video className="w-5 h-5 text-pink-400" />
+          <div className="w-9 h-9 rounded-xl bg-pink-500/20 flex items-center justify-center">
+            <Video className="w-4 h-4 text-pink-400" />
           </div>
-          <span className="text-sm text-gray-300">{t.player.uploadVideo}</span>
+          <span className="text-xs text-gray-400 text-center leading-tight">{t.player.uploadVideo}</span>
+        </motion.button>
+        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => { setAddMode(m => m === 'youtube' ? null : 'youtube'); setInputValue(''); setInputError(false); }}
+          className={`border rounded-2xl p-3 flex flex-col items-center gap-1.5 transition-all ${
+            addMode === 'youtube' ? 'bg-red-500/15 border-red-500/40' : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+          }`}
+        >
+          <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center">
+            <Youtube className="w-4 h-4 text-red-400" />
+          </div>
+          <span className="text-xs text-gray-400 text-center leading-tight">{t.player.addYoutube}</span>
+        </motion.button>
+        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => { setAddMode(m => m === 'url' ? null : 'url'); setInputValue(''); setInputError(false); }}
+          className={`border rounded-2xl p-3 flex flex-col items-center gap-1.5 transition-all ${
+            addMode === 'url' ? 'bg-cyan-500/15 border-cyan-500/40' : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+          }`}
+        >
+          <div className="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+            <Link className="w-4 h-4 text-cyan-400" />
+          </div>
+          <span className="text-xs text-gray-400 text-center leading-tight">{t.player.addUrl}</span>
         </motion.button>
       </div>
+
+      <AnimatePresence>
+        {addMode && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden mb-4"
+          >
+            <div className={`flex gap-2 p-3 rounded-2xl border ${
+              inputError ? 'border-red-500/50 bg-red-500/5' : addMode === 'youtube' ? 'border-red-500/30 bg-red-500/5' : 'border-cyan-500/30 bg-cyan-500/5'
+            }`}>
+              <input
+                type="text"
+                value={inputValue}
+                onChange={e => { setInputValue(e.target.value); setInputError(false); }}
+                onKeyDown={e => e.key === 'Enter' && handleAddUrl()}
+                placeholder={addMode === 'youtube' ? t.player.youtubePlaceholder : t.player.urlPlaceholder}
+                className="flex-1 bg-transparent text-white text-sm placeholder-gray-600 outline-none"
+                autoFocus
+              />
+              {inputError && <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 self-center" />}
+              <button onClick={handleAddUrl}
+                className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                  addMode === 'youtube' ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30'
+                }`}
+              >
+                <Plus className="w-3 h-3" />
+                {t.player.add}
+              </button>
+            </div>
+            {inputError && (
+              <p className="text-xs text-red-400 mt-1 ml-3">{t.player.invalidUrl}</p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         {current && (
@@ -223,18 +459,24 @@ export default function MediaPlayerView() {
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t.player.nowPlaying}</p>
             <p className="text-white font-semibold truncate mb-3">{current.title}</p>
 
-            {current.type === 'video' ? (
+            {current.type === 'youtube' ? (
+              <div
+                ref={ytContainerRef}
+                className="w-full rounded-2xl mb-3 overflow-hidden bg-black"
+                style={{ aspectRatio: '16/9' }}
+              />
+            ) : current.type === 'video' ? (
               <video
                 key={current.id}
                 ref={el => setMediaRef(el)}
-                src={current.objectUrl}
+                src={srcForEntry(current)}
                 className="w-full rounded-2xl mb-3 max-h-44 object-cover bg-black"
               />
             ) : (
               <audio
                 key={current.id}
                 ref={el => setMediaRef(el)}
-                src={current.objectUrl}
+                src={srcForEntry(current)}
                 preload="auto"
               />
             )}
@@ -253,8 +495,7 @@ export default function MediaPlayerView() {
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button onClick={() => skipTrack(-1)}
-                  className="text-gray-500 hover:text-white transition-colors">
+                <button onClick={() => skipTrack(-1)} className="text-gray-500 hover:text-white transition-colors">
                   <SkipBack className="w-5 h-5" />
                 </button>
                 <motion.button
@@ -267,8 +508,7 @@ export default function MediaPlayerView() {
                     : <Play className="w-5 h-5 text-white ml-0.5" />
                   }
                 </motion.button>
-                <button onClick={() => skipTrack(1)}
-                  className="text-gray-500 hover:text-white transition-colors">
+                <button onClick={() => skipTrack(1)} className="text-gray-500 hover:text-white transition-colors">
                   <SkipForward className="w-5 h-5" />
                 </button>
               </div>
@@ -321,17 +561,18 @@ export default function MediaPlayerView() {
                       ? 'bg-blue-500/10 border-blue-500/30'
                       : 'bg-white/5 border-white/10 hover:bg-white/10'
                   }`}
-                  onClick={() => playEntry(entry.id)}
+                  onClick={() => selectTrack(entry.id)}
                 >
                   <div className="relative flex-shrink-0">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      entry.type === 'audio' ? 'bg-blue-500/20' : 'bg-pink-500/20'
-                    }`}>
-                      {entry.type === 'audio'
-                        ? <Music className="w-4 h-4 text-blue-400" />
-                        : <Video className="w-4 h-4 text-pink-400" />
-                      }
-                    </div>
+                    {entry.type === 'youtube' && entry.thumbnail ? (
+                      <div className="w-10 h-8 rounded-lg overflow-hidden bg-black">
+                        <img src={entry.thumbnail} alt="" className="w-full h-full object-cover opacity-80" />
+                      </div>
+                    ) : (
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeIconBg(entry.type)}`}>
+                        {typeIcon(entry.type)}
+                      </div>
+                    )}
                     {currentId === entry.id && isPlaying && (
                       <motion.div
                         className="absolute inset-0 rounded-lg border-2 border-blue-400"
