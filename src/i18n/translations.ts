@@ -24,6 +24,9 @@ interface Translations {
     tasks: string;
     habits: string;
     decide: string;
+    player: string;
+    reader: string;
+    settings: string;
   };
   habits: {
     title: string;
@@ -62,6 +65,33 @@ interface Translations {
     dontLose: string;
     cardPlaceholder: string;
   };
+  player: {
+    title: string;
+    uploadAudio: string;
+    uploadVideo: string;
+    supported: string;
+    empty: string;
+    nowPlaying: string;
+    playlist: string;
+  };
+  reader: {
+    title: string;
+    upload: string;
+    supported: string;
+    empty: string;
+    page: string;
+    of: string;
+    backToLibrary: string;
+    fontSize: string;
+    previewText: string;
+  };
+  settings: {
+    title: string;
+    languageLabel: string;
+    themeLabel: string;
+    dark: string;
+    light: string;
+  };
   footer: string;
   language: string;
 }
@@ -78,6 +108,9 @@ export const translations: Record<Language, Translations> = {
       tasks: 'Tasks',
       habits: 'Habits',
       decide: 'Decide',
+      player: 'Player',
+      reader: 'Reader',
+      settings: 'Settings',
     },
     habits: {
       title: 'Daily Habits',
@@ -116,6 +149,33 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'What do I lose if I don\'t?',
       cardPlaceholder: 'Write your thoughts...',
     },
+    player: {
+      title: 'Media Player',
+      uploadAudio: 'Upload Audio',
+      uploadVideo: 'Upload Video',
+      supported: 'MP3, WAV, OGG, MP4, WEBM',
+      empty: 'No files. Upload media to start.',
+      nowPlaying: 'Now Playing',
+      playlist: 'Playlist',
+    },
+    reader: {
+      title: 'Book Reader',
+      upload: 'Upload Book',
+      supported: 'EPUB, PDF, TXT, FB2',
+      empty: 'No books yet. Upload a file to start reading.',
+      page: 'Page',
+      of: 'of',
+      backToLibrary: 'Library',
+      fontSize: 'Font size',
+      previewText: 'Book content will appear here. Full EPUB and PDF rendering supported.',
+    },
+    settings: {
+      title: 'Settings',
+      languageLabel: 'Language',
+      themeLabel: 'Theme',
+      dark: 'Dark',
+      light: 'Light',
+    },
     footer: 'One tool. $1. For clarity.',
     language: 'Language',
   },
@@ -130,6 +190,9 @@ export const translations: Record<Language, Translations> = {
       tasks: 'Tareas',
       habits: 'Hábitos',
       decide: 'Decidir',
+      player: 'Reproductor',
+      reader: 'Lector',
+      settings: 'Ajustes',
     },
     habits: {
       title: 'Hábitos Diarios',
@@ -168,6 +231,9 @@ export const translations: Record<Language, Translations> = {
       dontLose: '¿Qué pierdo si no lo hago?',
       cardPlaceholder: 'Escribe tus pensamientos...',
     },
+    player: { title: 'Reproductor', uploadAudio: 'Subir Audio', uploadVideo: 'Subir Video', supported: 'MP3, WAV, OGG, MP4, WEBM', empty: 'Sin archivos. Sube medios.', nowPlaying: 'Reproduciendo', playlist: 'Lista' },
+    reader: { title: 'Lector de Libros', upload: 'Subir Libro', supported: 'EPUB, PDF, TXT, FB2', empty: 'Sin libros. Sube un archivo.', page: 'Pág.', of: 'de', backToLibrary: 'Biblioteca', fontSize: 'Tamaño de fuente', previewText: 'El contenido del libro aparecerá aquí.' },
+    settings: { title: 'Ajustes', languageLabel: 'Idioma', themeLabel: 'Tema', dark: 'Oscuro', light: 'Claro' },
     footer: 'Una herramienta. $1. Para claridad.',
     language: 'Idioma',
   },
@@ -182,6 +248,9 @@ export const translations: Record<Language, Translations> = {
       tasks: 'Tâches',
       habits: 'Habitudes',
       decide: 'Décider',
+      player: 'Lecteur',
+      reader: 'Livres',
+      settings: 'Réglages',
     },
     habits: {
       title: 'Habitudes Quotidiennes',
@@ -220,6 +289,9 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Que perds-je si je ne fais pas?',
       cardPlaceholder: 'Écrivez vos pensées...',
     },
+    player: { title: 'Lecteur Média', uploadAudio: 'Charger Audio', uploadVideo: 'Charger Vidéo', supported: 'MP3, WAV, OGG, MP4, WEBM', empty: 'Pas de fichiers. Chargez des médias.', nowPlaying: 'En cours', playlist: 'Playlist' },
+    reader: { title: 'Lecteur de Livres', upload: 'Charger un Livre', supported: 'EPUB, PDF, TXT, FB2', empty: 'Pas de livres. Chargez un fichier.', page: 'Page', of: 'sur', backToLibrary: 'Bibliothèque', fontSize: 'Taille du texte', previewText: 'Le contenu du livre apparaîtra ici.' },
+    settings: { title: 'Réglages', languageLabel: 'Langue', themeLabel: 'Thème', dark: 'Sombre', light: 'Clair' },
     footer: 'Un outil. $1. Pour la clarté.',
     language: 'Langue',
   },
@@ -234,6 +306,9 @@ export const translations: Record<Language, Translations> = {
       tasks: 'Aufgaben',
       habits: 'Gewohnheiten',
       decide: 'Entscheiden',
+      player: 'Player',
+      reader: 'Bücher',
+      settings: 'Einstellungen',
     },
     habits: {
       title: 'Tägliche Gewohnheiten',
@@ -272,6 +347,9 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Was verliere ich, wenn ich es nicht tue?',
       cardPlaceholder: 'Schreibe deine Gedanken...',
     },
+    player: { title: 'Media Player', uploadAudio: 'Audio laden', uploadVideo: 'Video laden', supported: 'MP3, WAV, OGG, MP4, WEBM', empty: 'Keine Dateien. Lade Medien hoch.', nowPlaying: 'Spielt', playlist: 'Playlist' },
+    reader: { title: 'Buchleser', upload: 'Buch laden', supported: 'EPUB, PDF, TXT, FB2', empty: 'Keine Bücher. Lade eine Datei hoch.', page: 'Seite', of: 'von', backToLibrary: 'Bibliothek', fontSize: 'Schriftgröße', previewText: 'Buchinhalt erscheint hier.' },
+    settings: { title: 'Einstellungen', languageLabel: 'Sprache', themeLabel: 'Thema', dark: 'Dunkel', light: 'Hell' },
     footer: 'Ein Werkzeug. $1. Für Klarheit.',
     language: 'Sprache',
   },
@@ -286,6 +364,9 @@ export const translations: Record<Language, Translations> = {
       tasks: 'Завдання',
       habits: 'Звички',
       decide: 'Рішення',
+      player: 'Плеєр',
+      reader: 'Читалка',
+      settings: 'Налашт.',
     },
     habits: {
       title: 'Щоденні Звички',
@@ -324,6 +405,9 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Що я втрачу, якщо не зроблю?',
       cardPlaceholder: 'Напиши свої думки...',
     },
+    player: { title: 'Медіа-плеєр', uploadAudio: 'Завантажити аудіо', uploadVideo: 'Завантажити відео', supported: 'MP3, WAV, OGG, MP4, WEBM', empty: 'Немає файлів. Завантажте медіа.', nowPlaying: 'Зараз грає', playlist: 'Плейлист' },
+    reader: { title: 'Читалка книг', upload: 'Завантажити книгу', supported: 'EPUB, PDF, TXT, FB2', empty: 'Немає книг. Завантажте файл.', page: 'Стор.', of: 'з', backToLibrary: 'Бібліотека', fontSize: 'Розмір шрифту', previewText: 'Вміст книги відображатиметься тут. Підтримується EPUB та PDF.' },
+    settings: { title: 'Налаштування', languageLabel: 'Мова', themeLabel: 'Тема', dark: 'Темна', light: 'Світла' },
     footer: 'Один інструмент. $1. Для ясності.',
     language: 'Мова',
   },
@@ -338,6 +422,9 @@ export const translations: Record<Language, Translations> = {
       tasks: 'Tarefas',
       habits: 'Hábitos',
       decide: 'Decidir',
+      player: 'Player',
+      reader: 'Leitor',
+      settings: 'Config.',
     },
     habits: {
       title: 'Hábitos Diários',
@@ -376,6 +463,9 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'O que perco se eu não fizer?',
       cardPlaceholder: 'Escreva seus pensamentos...',
     },
+    player: { title: 'Player de Mídia', uploadAudio: 'Carregar Áudio', uploadVideo: 'Carregar Vídeo', supported: 'MP3, WAV, OGG, MP4, WEBM', empty: 'Sem arquivos. Carregue mídia.', nowPlaying: 'Tocando', playlist: 'Playlist' },
+    reader: { title: 'Leitor de Livros', upload: 'Carregar Livro', supported: 'EPUB, PDF, TXT, FB2', empty: 'Sem livros. Carregue um arquivo.', page: 'Pág.', of: 'de', backToLibrary: 'Biblioteca', fontSize: 'Tamanho da fonte', previewText: 'O conteúdo do livro aparecerá aqui.' },
+    settings: { title: 'Configurações', languageLabel: 'Idioma', themeLabel: 'Tema', dark: 'Escuro', light: 'Claro' },
     footer: 'Uma ferramenta. $1. Para clareza.',
     language: 'Idioma',
   },
@@ -390,6 +480,9 @@ export const translations: Record<Language, Translations> = {
       tasks: 'Attività',
       habits: 'Abitudini',
       decide: 'Decidere',
+      player: 'Player',
+      reader: 'Lettura',
+      settings: 'Opzioni',
     },
     habits: {
       title: 'Abitudini Giornaliere',
@@ -428,6 +521,9 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Cosa perdo se non lo faccio?',
       cardPlaceholder: 'Scrivi i tuoi pensieri...',
     },
+    player: { title: 'Lettore Multimediale', uploadAudio: 'Carica Audio', uploadVideo: 'Carica Video', supported: 'MP3, WAV, OGG, MP4, WEBM', empty: 'Nessun file. Carica media.', nowPlaying: 'In riproduzione', playlist: 'Playlist' },
+    reader: { title: 'Lettore di Libri', upload: 'Carica Libro', supported: 'EPUB, PDF, TXT, FB2', empty: 'Nessun libro. Carica un file.', page: 'Pag.', of: 'di', backToLibrary: 'Biblioteca', fontSize: 'Dimensione font', previewText: 'Il contenuto del libro apparirà qui.' },
+    settings: { title: 'Impostazioni', languageLabel: 'Lingua', themeLabel: 'Tema', dark: 'Scuro', light: 'Chiaro' },
     footer: 'Uno strumento. $1. Per chiarezza.',
     language: 'Lingua',
   },
@@ -442,6 +538,9 @@ export const translations: Record<Language, Translations> = {
       tasks: 'Zadania',
       habits: 'Nawyki',
       decide: 'Decyduj',
+      player: 'Player',
+      reader: 'Czytnik',
+      settings: 'Ustawienia',
     },
     habits: {
       title: 'Codzienne Nawyki',
@@ -480,6 +579,9 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Co stracę, jeśli tego nie zrobię?',
       cardPlaceholder: 'Napisz swoje myśli...',
     },
+    player: { title: 'Odtwarzacz', uploadAudio: 'Wgraj Audio', uploadVideo: 'Wgraj Wideo', supported: 'MP3, WAV, OGG, MP4, WEBM', empty: 'Brak plików. Wgraj media.', nowPlaying: 'Odtwarzanie', playlist: 'Lista' },
+    reader: { title: 'Czytnik Książek', upload: 'Wgraj Książkę', supported: 'EPUB, PDF, TXT, FB2', empty: 'Brak książek. Wgraj plik.', page: 'Str.', of: 'z', backToLibrary: 'Biblioteka', fontSize: 'Rozmiar czcionki', previewText: 'Treść książki pojawi się tutaj.' },
+    settings: { title: 'Ustawienia', languageLabel: 'Język', themeLabel: 'Motyw', dark: 'Ciemny', light: 'Jasny' },
     footer: 'Jedno narzędzie. $1. Dla jasności.',
     language: 'Język',
   },
@@ -494,6 +596,9 @@ export const translations: Record<Language, Translations> = {
       tasks: 'Задачи',
       habits: 'Привычки',
       decide: 'Решить',
+      player: 'Плеер',
+      reader: 'Читалка',
+      settings: 'Настройки',
     },
     habits: {
       title: 'Ежедневные Привычки',
@@ -532,6 +637,9 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Что я потеряю, если не сделаю?',
       cardPlaceholder: 'Напишите свои мысли...',
     },
+    player: { title: 'Медиа-плеер', uploadAudio: 'Загрузить аудио', uploadVideo: 'Загрузить видео', supported: 'MP3, WAV, OGG, MP4, WEBM', empty: 'Нет файлов. Загрузите медиа.', nowPlaying: 'Сейчас играет', playlist: 'Плейлист' },
+    reader: { title: 'Читалка книг', upload: 'Загрузить книгу', supported: 'EPUB, PDF, TXT, FB2', empty: 'Нет книг. Загрузите файл.', page: 'Стр.', of: 'из', backToLibrary: 'Библиотека', fontSize: 'Размер шрифта', previewText: 'Содержимое книги появится здесь. Поддерживается EPUB и PDF.' },
+    settings: { title: 'Настройки', languageLabel: 'Язык', themeLabel: 'Тема', dark: 'Тёмная', light: 'Светлая' },
     footer: 'Один инструмент. $1. Для ясности.',
     language: 'Язык',
   },
@@ -546,6 +654,9 @@ export const translations: Record<Language, Translations> = {
       tasks: '任务',
       habits: '习惯',
       decide: '决策',
+      player: '播放器',
+      reader: '阅读',
+      settings: '设置',
     },
     habits: {
       title: '每日习惯',
@@ -584,6 +695,9 @@ export const translations: Record<Language, Translations> = {
       dontLose: '如果我不这样做会失去什么？',
       cardPlaceholder: '写下你的想法...',
     },
+    player: { title: '媒体播放器', uploadAudio: '上传音频', uploadVideo: '上传视频', supported: 'MP3, WAV, OGG, MP4, WEBM', empty: '没有文件。请上传媒体。', nowPlaying: '正在播放', playlist: '播放列表' },
+    reader: { title: '电子书阅读器', upload: '上传书籍', supported: 'EPUB, PDF, TXT, FB2', empty: '没有书籍。请上传文件。', page: '页', of: '共', backToLibrary: '书库', fontSize: '字体大小', previewText: '书籍内容将在此显示。支持EPUB和PDF格式。' },
+    settings: { title: '设置', languageLabel: '语言', themeLabel: '主题', dark: '深色', light: '浅色' },
     footer: '一个工具。$1。为清晰而生。',
     language: '语言',
   },
