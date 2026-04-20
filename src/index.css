@@ -2,42 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 11%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 17%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --border: 217 33% 17%;
-    --ring: 199 89% 48%;
-  }
+body {
+  margin: 0;
+  padding: 0;
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
 }
 
-@layer base {
-  * {
-    border-color: hsl(var(--border));
-  }
-  body {
-    @apply bg-slate-950 text-slate-100 antialiased;
-  }
+* {
+  box-sizing: border-box;
 }
 
-/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: #1e293b;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #475569;
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #64748b;
 }
