@@ -104,15 +104,27 @@ export default function MediaPlayerView() {
     };
   }, []);
 
-  const loadYTApi = useCallback(() => {
-    if (ytApiReady.current || ytApiLoading.current) return;
-    ytApiLoading.current = true;
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-    window.onYouTubeIframeAPIReady = () => {
-      ytApiReady.current = true;
-    };
+  const loadYTApi = useCallback((): Promise<void> => {
+    if (ytApiReady.current && window.YT?.Player) return Promise.resolve();
+    return new Promise(resolve => {
+      if (window.YT?.Player) {
+        ytApiReady.current = true;
+        resolve();
+        return;
+      }
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        ytApiReady.current = true;
+        if (prev) prev();
+        resolve();
+      };
+      if (!ytApiLoading.current) {
+        ytApiLoading.current = true;
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+      }
+    });
   }, []);
 
   const advanceToNext = useCallback(() => {
@@ -147,17 +159,12 @@ export default function MediaPlayerView() {
     const videoId = extractYouTubeId(current.url);
     if (!videoId) return;
 
-    loadYTApi();
-
     let cancelled = false;
-    const tryCreate = () => {
-      if (cancelled) return;
-      if (!ytApiReady.current || !window.YT || !ytContainerRef.current) {
-        setTimeout(tryCreate, 200);
-        return;
-      }
+
+    loadYTApi().then(() => {
+      if (cancelled || !ytContainerRef.current) return;
       destroyYT();
-      if (!ytContainerRef.current) return;
+      if (cancelled || !ytContainerRef.current) return;
       ytContainerRef.current.innerHTML = '';
       const div = document.createElement('div');
       ytContainerRef.current.appendChild(div);
@@ -191,8 +198,8 @@ export default function MediaPlayerView() {
           },
         },
       });
-    };
-    tryCreate();
+    });
+
     return () => { cancelled = true; };
   }, [current?.id, current?.type]);
 
@@ -224,9 +231,8 @@ export default function MediaPlayerView() {
       const videoId = extractYouTubeId(raw);
       if (!videoId) { setInputError(true); return; }
       const id = `yt_${Date.now()}`;
-      const title = raw.length > 50 ? `YouTube: ${videoId}` : `YouTube: ${raw}`;
       const item: StoredMedia = {
-        id, title, type: 'youtube',
+        id, title: `YouTube: ${videoId}`, type: 'youtube',
         url: raw,
         thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
       };
