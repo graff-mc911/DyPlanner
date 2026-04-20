@@ -1,133 +1,112 @@
-import { Globe, Moon, Sun } from 'lucide-react'
+import { motion } from 'framer-motion';
+import { Globe, Moon, Sun, Check } from 'lucide-react';
+import { useLanguage } from '../i18n/LanguageContext';
+import { languages, Language } from '../i18n/translations';
 
-interface SettingsProps {
-  language: string
-  setLanguage: (lang: string) => void
-  theme: 'dark' | 'light'
-  setTheme: (theme: 'dark' | 'light') => void
+type AppTheme = 'dark' | 'light';
+
+interface SettingsViewProps {
+  theme: AppTheme;
+  onThemeChange: (theme: AppTheme) => void;
 }
 
-// Всі 24 мови
-const languages = [
-  { code: 'uk', name: 'Українська', flag: '🇺🇦' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
-  { code: 'pt', name: 'Português', flag: '🇵🇹' },
-  { code: 'pl', name: 'Polski', flag: '🇵🇱' },
-  { code: 'ru', name: 'Русский', flag: '🇷🇺' },
-  { code: 'ja', name: '日本語', flag: '🇯🇵' },
-  { code: 'zh', name: '中文', flag: '🇨🇳' },
-  { code: 'ko', name: '한국어', flag: '🇰🇷' },
-  { code: 'ar', name: 'العربية', flag: '🇸🇦' },
-  { code: 'hi', name: 'हिन्दी', flag: '🇮🇳' },
-  { code: 'tr', name: 'Türkçe', flag: '🇹🇷' },
-  { code: 'nl', name: 'Nederlands', flag: '🇳🇱' },
-  { code: 'sv', name: 'Svenska', flag: '🇸🇪' },
-  { code: 'cs', name: 'Čeština', flag: '🇨🇿' },
-  { code: 'ro', name: 'Română', flag: '🇷🇴' },
-  { code: 'hu', name: 'Magyar', flag: '🇭🇺' },
-  { code: 'bg', name: 'Български', flag: '🇧🇬' },
-  { code: 'hr', name: 'Hrvatski', flag: '🇭🇷' },
-  { code: 'sk', name: 'Slovenčina', flag: '🇸🇰' },
-  { code: 'lt', name: 'Lietuvių', flag: '🇱🇹' }
-]
-
-export function SettingsView({ language, setLanguage, theme, setTheme }: SettingsProps) {
-  const t = {
-    uk: { title: 'Налаштування', language: 'Мова', theme: 'Тема', dark: 'Темна', light: 'Світла' },
-    en: { title: 'Settings', language: 'Language', theme: 'Theme', dark: 'Dark', light: 'Light' },
-    es: { title: 'Configuración', language: 'Idioma', theme: 'Tema', dark: 'Oscuro', light: 'Claro' },
-    fr: { title: 'Paramètres', language: 'Langue', theme: 'Thème', dark: 'Sombre', light: 'Clair' },
-    de: { title: 'Einstellungen', language: 'Sprache', theme: 'Thema', dark: 'Dunkel', light: 'Hell' },
-    it: { title: 'Impostazioni', language: 'Lingua', theme: 'Tema', dark: 'Scuro', light: 'Chiaro' },
-    pt: { title: 'Configurações', language: 'Idioma', theme: 'Tema', dark: 'Escuro', light: 'Claro' },
-    pl: { title: 'Ustawienia', language: 'Język', theme: 'Motyw', dark: 'Ciemny', light: 'Jasny' },
-    ru: { title: 'Настройки', language: 'Язык', theme: 'Тема', dark: 'Тёмная', light: 'Светлая' },
-    ja: { title: '設定', language: '言語', theme: 'テーマ', dark: 'ダーク', light: 'ライト' },
-    zh: { title: '设置', language: '语言', theme: '主题', dark: '深色', light: '浅色' },
-    ko: { title: '설정', language: '언어', theme: '테마', dark: '다크', light: '라이트' },
-    ar: { title: 'الإعدادات', language: 'اللغة', theme: 'السمة', dark: 'داكن', light: 'فاتح' },
-    hi: { title: 'सेटिंग्स', language: 'भाषा', theme: 'थीम', dark: 'डार्क', light: 'लाइट' },
-    tr: { title: 'Ayarlar', language: 'Dil', theme: 'Tema', dark: 'Koyu', light: 'Açık' },
-    nl: { title: 'Instellingen', language: 'Taal', theme: 'Thema', dark: 'Donker', light: 'Licht' },
-    sv: { title: 'Inställningar', language: 'Språk', theme: 'Tema', dark: 'Mörk', light: 'Ljus' },
-    cs: { title: 'Nastavení', language: 'Jazyk', theme: 'Motiv', dark: 'Tmavý', light: 'Světlý' },
-    ro: { title: 'Setări', language: 'Limbă', theme: 'Temă', dark: 'Întunecat', light: 'Deschis' },
-    hu: { title: 'Beállítások', language: 'Nyelv', theme: 'Téma', dark: 'Sötét', light: 'Világos' },
-    bg: { title: 'Настройки', language: 'Език', theme: 'Тема', dark: 'Тъмна', light: 'Светла' },
-    hr: { title: 'Postavke', language: 'Jezik', theme: 'Tema', dark: 'Tamna', light: 'Svijetla' },
-    sk: { title: 'Nastavenia', language: 'Jazyk', theme: 'Téma', dark: 'Tmavá', light: 'Svetlá' },
-    lt: { title: 'Nustatymai', language: 'Kalba', theme: 'Tema', dark: 'Tamsi', light: 'Šviesi' }
-  }[language] || { title: 'Settings', language: 'Language', theme: 'Theme', dark: 'Dark', light: 'Light' }
+export default function SettingsView({ theme, onThemeChange }: SettingsViewProps) {
+  const { t, language, setLanguage } = useLanguage();
 
   return (
-    <div className={theme === 'dark' ? 'text-slate-100' : 'text-gray-900'}>
-      <h2 className="text-2xl font-bold mb-6">{t.title}</h2>
-
-      {/* Мова */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <Globe size={20} className="text-sky-500" />
-          <span className="font-medium">{t.language}</span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1">
-          {languages.map(lang => (
-            <button
-              key={lang.code}
-              onClick={() => setLanguage(lang.code)}
-              className={`p-3 rounded-lg border-2 transition-colors text-left ${
-                language === lang.code 
-                  ? 'border-sky-500 bg-sky-500/20' 
-                  : theme === 'dark' 
-                    ? 'border-slate-700 hover:border-slate-600' 
-                    : 'border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              <span className="mr-2">{lang.flag}</span>
-              <span className="text-sm">{lang.name}</span>
-            </button>
-          ))}
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+      className="flex flex-col h-full p-6 pb-28"
+    >
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-white mb-2">{t.settings.title}</h1>
       </div>
 
-      {/* Тема */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          {theme === 'dark' ? <Moon size={20} className="text-violet-500" /> : <Sun size={20} className="text-yellow-500" />}
-          <span className="font-medium">{t.theme}</span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setTheme('dark')}
-            className={`p-3 rounded-lg border-2 transition-colors flex items-center justify-center gap-2 ${
-              theme === 'dark' 
-                ? 'border-violet-500 bg-violet-500/20' 
-                : theme === 'dark'
-                  ? 'border-slate-700 hover:border-slate-600'
-                  : 'border-gray-300 hover:border-gray-400'
-            }`}
-          >
-            <Moon size={18} />
-            {t.dark}
-          </button>
-          <button
-            onClick={() => setTheme('light')}
-            className={`p-3 rounded-lg border-2 transition-colors flex items-center justify-center gap-2 ${
-              theme === 'light' 
-                ? 'border-yellow-500 bg-yellow-500/20' 
-                : theme === 'dark'
-                  ? 'border-slate-700 hover:border-slate-600'
-                  : 'border-gray-300 hover:border-gray-400'
-            }`}
-          >
-            <Sun size={18} />
-            {t.light}
-          </button>
-        </div>
+      <div className="space-y-6">
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Moon className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-medium text-gray-300 uppercase tracking-wider">{t.settings.themeLabel}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {(['dark', 'light'] as AppTheme[]).map(th => (
+              <motion.button
+                key={th}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => onThemeChange(th)}
+                className={`relative flex items-center gap-3 p-4 rounded-2xl border transition-all ${
+                  theme === th
+                    ? 'bg-blue-500/15 border-blue-500/40'
+                    : 'bg-white/5 border-white/10 hover:bg-white/10'
+                }`}
+              >
+                {th === 'dark'
+                  ? <Moon className="w-5 h-5 text-gray-300" />
+                  : <Sun className="w-5 h-5 text-yellow-400" />
+                }
+                <span className="text-white font-medium text-sm">
+                  {th === 'dark' ? t.settings.dark : t.settings.light}
+                </span>
+                {theme === th && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-2 right-2 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center"
+                  >
+                    <Check className="w-3 h-3 text-white" />
+                  </motion.div>
+                )}
+              </motion.button>
+            ))}
+          </div>
+        </section>
+
+        <div className="h-px bg-white/5" />
+
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Globe className="w-4 h-4 text-gray-400" />
+            <span className="text-sm font-medium text-gray-300 uppercase tracking-wider">{t.settings.languageLabel}</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {languages.map((lang, i) => (
+              <motion.button
+                key={lang.code}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setLanguage(lang.code as Language)}
+                className={`relative flex items-center gap-3 p-3 rounded-2xl border text-left transition-all ${
+                  language === lang.code
+                    ? 'bg-blue-500/15 border-blue-500/40'
+                    : 'bg-white/5 border-white/10 hover:bg-white/10'
+                }`}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate ${language === lang.code ? 'text-blue-300' : 'text-white'}`}>
+                    {lang.nativeName}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{lang.name}</p>
+                </div>
+                {language === lang.code && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0"
+                  >
+                    <Check className="w-2.5 h-2.5 text-white" />
+                  </motion.div>
+                )}
+              </motion.button>
+            ))}
+          </div>
+        </section>
       </div>
-    </div>
-  )
+    </motion.div>
+  );
 }
