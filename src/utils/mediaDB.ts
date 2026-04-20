@@ -58,13 +58,45 @@ export async function deleteMedia(id: string): Promise<void> {
 }
 
 export function extractYouTubeId(input: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-    /^([a-zA-Z0-9_-]{11})$/,
-  ];
-  for (const p of patterns) {
-    const m = input.match(p);
-    if (m) return m[1];
+  const raw = input.trim();
+  const direct = raw.match(/^([a-zA-Z0-9_-]{11})$/);
+  if (direct) return direct[1];
+
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return null;
   }
+
+  const host = parsed.hostname.toLowerCase();
+  const path = parsed.pathname.replace(/\/+$/, '');
+  const candidates: string[] = [];
+
+  if (host === 'youtu.be' || host === 'www.youtu.be') {
+    const shortId = path.split('/').filter(Boolean)[0];
+    if (shortId) candidates.push(shortId);
+  }
+
+  const isYouTubeHost =
+    /(^|\.)youtube\.com$/.test(host) || /(^|\.)youtube-nocookie\.com$/.test(host);
+
+  if (isYouTubeHost) {
+    const fromQuery = parsed.searchParams.get('v');
+    if (fromQuery) candidates.push(fromQuery);
+
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length >= 2 && ['embed', 'shorts', 'live', 'v'].includes(segments[0])) {
+      candidates.push(segments[1]);
+    }
+  }
+
+  for (const candidate of candidates) {
+    const clean = candidate.trim();
+    if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) {
+      return clean;
+    }
+  }
+
   return null;
 }
