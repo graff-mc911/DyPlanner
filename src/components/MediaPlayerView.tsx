@@ -29,7 +29,7 @@ async function fetchYouTubeTitle(url: string): Promise<string | null> {
     const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
     if (!res.ok) return null;
     const data = await res.json();
-    return data.title || null;
+    return (data.title as string) || null;
   } catch {
     return null;
   }
@@ -102,20 +102,19 @@ export default function MediaPlayerView() {
   const [inputError, setInputError] = useState(false);
   const [fetchingTitle, setFetchingTitle] = useState(false);
 
-  // Persistent refs — audio & video are ALWAYS mounted, never unmounted
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  // Single hidden <audio> — always in DOM, src swapped on track change
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoElRef = useRef<HTMLVideoElement | null>(null);
   const ytPlayerRef = useRef<YTPlayer | null>(null);
-  const ytContainerRef = useRef<HTMLDivElement>(null);
+  const ytContainerRef = useRef<HTMLDivElement | null>(null);
   const ytTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const entriesRef = useRef<MediaEntry[]>([]);
   const currentIdRef = useRef<string | null>(null);
   const volumeRef = useRef(80);
-  const audioFileRef = useRef<HTMLInputElement>(null);
-  const videoFileRef = useRef<HTMLInputElement>(null);
+  const audioFileRef = useRef<HTMLInputElement | null>(null);
+  const videoFileRef = useRef<HTMLInputElement | null>(null);
   const ytApiReady = useRef(false);
   const ytApiLoading = useRef(false);
-  const advanceToNextRef = useRef<() => void>(() => {});
 
   entriesRef.current = entries;
   currentIdRef.current = currentId;
@@ -124,58 +123,7 @@ export default function MediaPlayerView() {
   const current = entries.find(e => e.id === currentId) ?? null;
   const isYT = current?.type === 'youtube';
 
-  // ── advanceToNext via ref to avoid stale closures ─────────────────
-  const advanceToNext = useCallback(() => {
-    advanceToNextRef.current();
-  }, []);
-
-  useEffect(() => {
-    advanceToNextRef.current = () => {
-      const list = entriesRef.current;
-      const cid = currentIdRef.current;
-      if (!cid || list.length === 0) return;
-      const idx = list.findIndex(e => e.id === cid);
-      if (idx < 0 || idx >= list.length - 1) {
-        setIsPlaying(false);
-        setCurrentTime(0);
-        return;
-      }
-      const next = list[idx + 1];
-      setCurrentId(next.id);
-      currentIdRef.current = next.id;
-      setIsPlaying(false);
-      setCurrentTime(0);
-      setDuration(0);
-    };
-  });
-
-  // ── Wire audio element once on mount ─────────────────────────────
-  useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    el.volume = volumeRef.current / 100;
-    el.ontimeupdate = () => setCurrentTime(el.currentTime);
-    el.ondurationchange = () => { if (isFinite(el.duration)) setDuration(el.duration); };
-    el.onplay = () => setIsPlaying(true);
-    el.onpause = () => setIsPlaying(false);
-    el.onended = () => { setIsPlaying(false); setCurrentTime(0); advanceToNextRef.current(); };
-    el.onerror = () => setIsPlaying(false);
-  }, []);
-
-  // ── Wire video element once on mount ─────────────────────────────
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.volume = volumeRef.current / 100;
-    el.ontimeupdate = () => setCurrentTime(el.currentTime);
-    el.ondurationchange = () => { if (isFinite(el.duration)) setDuration(el.duration); };
-    el.onplay = () => setIsPlaying(true);
-    el.onpause = () => setIsPlaying(false);
-    el.onended = () => { setIsPlaying(false); setCurrentTime(0); advanceToNextRef.current(); };
-    el.onerror = () => setIsPlaying(false);
-  }, []);
-
-  // ── Load persisted media ──────────────────────────────────────────
+  // ── Load persisted media on mount ────────────────────────────────
   useEffect(() => {
     loadAllMedia().then(items => {
       const loaded: MediaEntry[] = items.map(item => ({
@@ -185,14 +133,13 @@ export default function MediaPlayerView() {
       setEntries(loaded);
       setLoading(false);
     }).catch(() => setLoading(false));
-
     return () => {
       entriesRef.current.forEach(e => { if (e.objectUrl) URL.revokeObjectURL(e.objectUrl); });
       if (ytTimerRef.current) clearInterval(ytTimerRef.current);
     };
   }, []);
 
-  // ── YouTube IFrame API ────────────────────────────────────────────
+  // ── YouTube API loader ────────────────────────────────────────────
   const loadYTApi = useCallback((): Promise<void> => {
     if (ytApiReady.current && window.YT?.Player) return Promise.resolve();
     return new Promise(resolve => {
@@ -212,12 +159,21 @@ export default function MediaPlayerView() {
     });
   }, []);
 
+  const advanceToNext = useCallback(() => {
+    const list = entriesRef.current;
+    const cid = currentIdRef.current;
+    if (!cid || list.length === 0) return;
+    const idx = list.findIndex(e => e.id === cid);
+    if (idx < 0 || idx >= list.length - 1) { setIsPlaying(false); setCurrentTime(0); return; }
+    const next = list[idx + 1];
+    setCurrentId(next.id);
+    currentIdRef.current = next.id;
+    setIsPlaying(false); setCurrentTime(0); setDuration(0);
+  }, []);
+
   const destroyYT = useCallback(() => {
     if (ytTimerRef.current) { clearInterval(ytTimerRef.current); ytTimerRef.current = null; }
-    if (ytPlayerRef.current) {
-      try { ytPlayerRef.current.destroy(); } catch (_) {}
-      ytPlayerRef.current = null;
-    }
+    if (ytPlayerRef.current) { try { ytPlayerRef.current.destroy(); } catch (_) {} ytPlayerRef.current = null; }
   }, []);
 
   // ── YouTube player lifecycle ──────────────────────────────────────
@@ -235,7 +191,6 @@ export default function MediaPlayerView() {
       ytContainerRef.current.innerHTML = '';
       const div = document.createElement('div');
       ytContainerRef.current.appendChild(div);
-
       ytPlayerRef.current = new window.YT.Player(div, {
         videoId,
         playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1 },
@@ -247,9 +202,8 @@ export default function MediaPlayerView() {
             setIsPlaying(true);
             ytTimerRef.current = setInterval(() => {
               if (!ytPlayerRef.current) return;
-              const ct = ytPlayerRef.current.getCurrentTime();
+              setCurrentTime(ytPlayerRef.current.getCurrentTime());
               const dur = ytPlayerRef.current.getDuration();
-              setCurrentTime(ct);
               if (dur > 0) setDuration(dur);
             }, 500);
           },
@@ -257,82 +211,75 @@ export default function MediaPlayerView() {
             if (cancelled) return;
             if (e.data === window.YT.PlayerState.PLAYING) setIsPlaying(true);
             if (e.data === window.YT.PlayerState.PAUSED) setIsPlaying(false);
-            if (e.data === window.YT.PlayerState.ENDED) {
-              setIsPlaying(false);
-              setCurrentTime(0);
-              advanceToNextRef.current();
-            }
+            if (e.data === window.YT.PlayerState.ENDED) { setIsPlaying(false); setCurrentTime(0); advanceToNext(); }
           },
         },
       });
     });
     return () => { cancelled = true; };
-  }, [current?.id, current?.type, destroyYT, loadYTApi]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id, current?.type]);
 
-  // ── Audio/video playback on track change ──────────────────────────
+  // ── Audio src swap on track change ───────────────────────────────
   useEffect(() => {
-    if (!current || current.type === 'youtube' || current.type === 'url') return;
-
-    const isVideo = current.type === 'video';
-    const el = isVideo ? videoRef.current : audioRef.current;
-    if (!el) return;
-
-    // Stop the other element
-    const other = isVideo ? audioRef.current : videoRef.current;
-    if (other) { other.pause(); other.src = ''; }
-
+    const el = audioRef.current;
+    if (!el || !current || current.type !== 'audio') return;
     const src = current.objectUrl ?? current.url ?? '';
     if (!src) return;
-
+    el.pause();
     el.src = src;
     el.volume = volumeRef.current / 100;
     el.load();
+    el.play().catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id]);
 
-    const onCanPlay = () => {
-      el.play().catch(() => {});
-    };
-    el.addEventListener('canplay', onCanPlay, { once: true });
+  // ── Wire the hidden audio element (once on mount) ─────────────────
+  const setAudioRef = useCallback((el: HTMLAudioElement | null) => {
+    audioRef.current = el;
+    if (!el) return;
+    el.volume = volumeRef.current / 100;
+    el.ontimeupdate = () => setCurrentTime(el.currentTime);
+    el.ondurationchange = () => { if (isFinite(el.duration)) setDuration(el.duration); };
+    el.onplay = () => setIsPlaying(true);
+    el.onpause = () => setIsPlaying(false);
+    el.onended = () => { setIsPlaying(false); setCurrentTime(0); advanceToNext(); };
+    el.onerror = () => setIsPlaying(false);
+  }, [advanceToNext]);
 
-    return () => {
-      el.removeEventListener('canplay', onCanPlay);
-    };
-  }, [current?.id, current?.type]);
+  // ── Wire video element (called via ref callback each render for current video) ─
+  const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    videoElRef.current = el;
+    if (!el) return;
+    el.volume = volumeRef.current / 100;
+    el.ontimeupdate = () => setCurrentTime(el.currentTime);
+    el.ondurationchange = () => { if (isFinite(el.duration)) setDuration(el.duration); };
+    el.onplay = () => setIsPlaying(true);
+    el.onpause = () => setIsPlaying(false);
+    el.onended = () => { setIsPlaying(false); setCurrentTime(0); advanceToNext(); };
+    el.onerror = () => setIsPlaying(false);
+    el.play().catch(() => {});
+  }, [advanceToNext]);
 
   // ── File upload ───────────────────────────────────────────────────
-  const handleFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    type: 'audio' | 'video',
-  ) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'audio' | 'video') => {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
     e.target.value = '';
     const newEntries: MediaEntry[] = [];
-
     for (const file of Array.from(fileList)) {
       const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const item: StoredMedia = {
-        id,
-        title: file.name.replace(/\.[^/.]+$/, ''),
-        type,
-        blob: file,
-      };
+      const objectUrl = URL.createObjectURL(file);
+      const item: StoredMedia = { id, title: file.name.replace(/\.[^/.]+$/, ''), type, blob: file };
       await saveMedia(item);
-      newEntries.push({ ...item, objectUrl: URL.createObjectURL(file) });
+      newEntries.push({ ...item, objectUrl });
     }
-
-    setEntries(prev => {
-      const updated = [...prev, ...newEntries];
-      // Auto-select first uploaded if nothing playing
-      if (!currentIdRef.current && newEntries.length > 0) {
-        const first = newEntries[0];
-        setCurrentId(first.id);
-        currentIdRef.current = first.id;
-        setIsPlaying(false);
-        setCurrentTime(0);
-        setDuration(0);
-      }
-      return updated;
-    });
+    setEntries(prev => [...prev, ...newEntries]);
+    if (!currentIdRef.current && newEntries.length > 0) {
+      setCurrentId(newEntries[0].id);
+      currentIdRef.current = newEntries[0].id;
+      setIsPlaying(false); setCurrentTime(0); setDuration(0);
+    }
   };
 
   // ── Add URL / YouTube ─────────────────────────────────────────────
@@ -341,7 +288,7 @@ export default function MediaPlayerView() {
     if (!raw || fetchingTitle) return;
 
     const ytId = extractYouTubeId(raw);
-    const effectiveMode = addMode === 'url' && ytId ? 'youtube' : addMode;
+    const effectiveMode = (addMode === 'url' && ytId) ? 'youtube' : addMode;
 
     if (effectiveMode === 'youtube') {
       const videoId = ytId ?? extractYouTubeId(raw);
@@ -352,19 +299,15 @@ export default function MediaPlayerView() {
       const title = fetched || `YouTube: ${videoId}`;
       const id = `yt_${Date.now()}`;
       const item: StoredMedia = {
-        id, title, type: 'youtube',
-        url: raw,
+        id, title, type: 'youtube', url: raw,
         thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
       };
       await saveMedia(item);
-      setEntries(prev => {
-        if (!currentIdRef.current) {
-          setCurrentId(id);
-          currentIdRef.current = id;
-          setIsPlaying(false); setCurrentTime(0); setDuration(0);
-        }
-        return [...prev, { ...item }];
-      });
+      setEntries(prev => [...prev, { ...item }]);
+      if (!currentIdRef.current) {
+        setCurrentId(id); currentIdRef.current = id;
+        setIsPlaying(false); setCurrentTime(0); setDuration(0);
+      }
     } else {
       try { new URL(raw); } catch { setInputError(true); return; }
       const detectedType = detectUrlMediaType(raw);
@@ -376,64 +319,48 @@ export default function MediaPlayerView() {
       const id = `url_${Date.now()}`;
       const item: StoredMedia = { id, title, type: detectedType, url: raw };
       await saveMedia(item);
-      setEntries(prev => {
-        if (!currentIdRef.current) {
-          setCurrentId(id);
-          currentIdRef.current = id;
-          setIsPlaying(false); setCurrentTime(0); setDuration(0);
-        }
-        return [...prev, { ...item }];
-      });
+      setEntries(prev => [...prev, { ...item }]);
+      if (!currentIdRef.current) {
+        setCurrentId(id); currentIdRef.current = id;
+        setIsPlaying(false); setCurrentTime(0); setDuration(0);
+      }
     }
-
-    setInputValue('');
-    setInputError(false);
-    setAddMode(null);
+    setInputValue(''); setInputError(false); setAddMode(null);
   };
 
   // ── Controls ──────────────────────────────────────────────────────
   const selectTrack = useCallback((id: string) => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
-    if (videoRef.current) { videoRef.current.pause(); videoRef.current.src = ''; }
     destroyYT();
-    setCurrentId(id);
-    currentIdRef.current = id;
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
+    setCurrentId(id); currentIdRef.current = id;
+    setIsPlaying(false); setCurrentTime(0); setDuration(0);
   }, [destroyYT]);
+
+  const activeMediaEl = useCallback(() => {
+    if (current?.type === 'video') return videoElRef.current;
+    return audioRef.current;
+  }, [current?.type]);
 
   const togglePlay = useCallback(() => {
     if (isYT && ytPlayerRef.current) {
-      if (isPlaying) ytPlayerRef.current.pauseVideo();
-      else ytPlayerRef.current.playVideo();
+      if (isPlaying) ytPlayerRef.current.pauseVideo(); else ytPlayerRef.current.playVideo();
       return;
     }
-    const el = current?.type === 'video' ? videoRef.current : audioRef.current;
+    const el = activeMediaEl();
     if (!el) return;
-    if (isPlaying) {
-      el.pause();
-    } else {
-      el.volume = volumeRef.current / 100;
-      el.play().catch(() => {});
-    }
-  }, [isPlaying, isYT, current?.type]);
+    if (isPlaying) el.pause();
+    else { el.volume = volumeRef.current / 100; el.play().catch(() => {}); }
+  }, [isPlaying, isYT, activeMediaEl]);
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value);
     if (isYT && ytPlayerRef.current) {
       const dur = ytPlayerRef.current.getDuration();
-      if (dur > 0) {
-        ytPlayerRef.current.seekTo((val / 100) * dur, true);
-        setCurrentTime((val / 100) * dur);
-      }
+      if (dur > 0) { ytPlayerRef.current.seekTo((val / 100) * dur, true); setCurrentTime((val / 100) * dur); }
       return;
     }
-    const el = current?.type === 'video' ? videoRef.current : audioRef.current;
-    if (el && isFinite(el.duration)) {
-      el.currentTime = (val / 100) * el.duration;
-      setCurrentTime(el.currentTime);
-    }
+    const el = activeMediaEl();
+    if (el && isFinite(el.duration)) { el.currentTime = (val / 100) * el.duration; setCurrentTime(el.currentTime); }
   };
 
   const skipTrack = useCallback((dir: 1 | -1) => {
@@ -441,27 +368,23 @@ export default function MediaPlayerView() {
     const cid = currentIdRef.current;
     if (!cid || list.length === 0) return;
     const idx = list.findIndex(e => e.id === cid);
-    const next = list[(idx + dir + list.length) % list.length];
-    selectTrack(next.id);
+    selectTrack(list[(idx + dir + list.length) % list.length].id);
   }, [selectTrack]);
 
   const removeEntry = async (id: string) => {
     if (currentIdRef.current === id) {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
-      if (videoRef.current) { videoRef.current.pause(); videoRef.current.src = ''; }
       destroyYT();
     }
     await deleteMedia(id);
     const removed = entriesRef.current.find(e => e.id === id);
     if (removed?.objectUrl) URL.revokeObjectURL(removed.objectUrl);
-
     setEntries(prev => {
       const updated = prev.filter(e => e.id !== id);
       if (currentIdRef.current === id) {
         const oldIdx = prev.findIndex(e => e.id === id);
         const next = updated[oldIdx] ?? updated[oldIdx - 1] ?? null;
-        setCurrentId(next?.id ?? null);
-        currentIdRef.current = next?.id ?? null;
+        setCurrentId(next?.id ?? null); currentIdRef.current = next?.id ?? null;
         setIsPlaying(false); setCurrentTime(0); setDuration(0);
       }
       return updated;
@@ -469,10 +392,9 @@ export default function MediaPlayerView() {
   };
 
   const handleVolumeChange = (val: number) => {
-    setVolume(val);
-    volumeRef.current = val;
+    setVolume(val); volumeRef.current = val;
     if (audioRef.current) audioRef.current.volume = val / 100;
-    if (videoRef.current) videoRef.current.volume = val / 100;
+    if (videoElRef.current) videoElRef.current.volume = val / 100;
     if (ytPlayerRef.current) ytPlayerRef.current.setVolume(val);
   };
 
@@ -491,40 +413,17 @@ export default function MediaPlayerView() {
       </div>
 
       {/* Hidden file inputs */}
-      <input
-        ref={audioFileRef}
-        type="file"
-        accept="audio/*"
-        multiple
-        className="hidden"
-        onChange={e => handleFileUpload(e, 'audio')}
-      />
-      <input
-        ref={videoFileRef}
-        type="file"
-        accept="video/*"
-        multiple
-        className="hidden"
-        onChange={e => handleFileUpload(e, 'video')}
-      />
+      <input ref={audioFileRef} type="file" accept="audio/*" multiple className="hidden"
+        onChange={e => handleFileUpload(e, 'audio')} />
+      <input ref={videoFileRef} type="file" accept="video/*" multiple className="hidden"
+        onChange={e => handleFileUpload(e, 'video')} />
 
-      {/*
-        Persistent media elements — ALWAYS in DOM, never conditionally unmounted.
-        Visibility controlled via CSS only. This ensures refs are always valid.
-      */}
-      <audio ref={audioRef} preload="auto" style={{ display: 'none' }} />
-      <video
-        ref={videoRef}
-        playsInline
-        style={{ display: 'none' }}
-        className="w-full rounded-2xl mb-3 max-h-52 object-contain bg-black"
-      />
+      {/* Hidden audio element — always mounted, src swapped per track */}
+      <audio ref={setAudioRef} preload="auto" style={{ display: 'none' }} />
 
       {/* Action buttons */}
       <div className="grid grid-cols-4 gap-2 mb-4">
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
+        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           onClick={() => audioFileRef.current?.click()}
           className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all"
         >
@@ -533,10 +432,7 @@ export default function MediaPlayerView() {
           </div>
           <span className="text-xs text-gray-400 text-center leading-tight">{t.player.uploadAudio}</span>
         </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
+        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           onClick={() => videoFileRef.current?.click()}
           className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all"
         >
@@ -545,19 +441,10 @@ export default function MediaPlayerView() {
           </div>
           <span className="text-xs text-gray-400 text-center leading-tight">{t.player.uploadVideo}</span>
         </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => {
-            setAddMode(m => m === 'youtube' ? null : 'youtube');
-            setInputValue('');
-            setInputError(false);
-          }}
+        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => { setAddMode(m => m === 'youtube' ? null : 'youtube'); setInputValue(''); setInputError(false); }}
           className={`border rounded-2xl p-3 flex flex-col items-center gap-1.5 transition-all ${
-            addMode === 'youtube'
-              ? 'bg-red-500/15 border-red-500/40'
-              : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+            addMode === 'youtube' ? 'bg-red-500/15 border-red-500/40' : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
           }`}
         >
           <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center">
@@ -565,19 +452,10 @@ export default function MediaPlayerView() {
           </div>
           <span className="text-xs text-gray-400 text-center leading-tight">{t.player.addYoutube}</span>
         </motion.button>
-
-        <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => {
-            setAddMode(m => m === 'url' ? null : 'url');
-            setInputValue('');
-            setInputError(false);
-          }}
+        <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+          onClick={() => { setAddMode(m => m === 'url' ? null : 'url'); setInputValue(''); setInputError(false); }}
           className={`border rounded-2xl p-3 flex flex-col items-center gap-1.5 transition-all ${
-            addMode === 'url'
-              ? 'bg-cyan-500/15 border-cyan-500/40'
-              : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+            addMode === 'url' ? 'bg-cyan-500/15 border-cyan-500/40' : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
           }`}
         >
           <div className="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center">
@@ -597,31 +475,22 @@ export default function MediaPlayerView() {
             className="overflow-hidden mb-4"
           >
             <div className={`flex gap-2 p-3 rounded-2xl border ${
-              inputError
-                ? 'border-red-500/50 bg-red-500/5'
-                : addMode === 'youtube'
-                  ? 'border-red-500/30 bg-red-500/5'
-                  : 'border-cyan-500/30 bg-cyan-500/5'
+              inputError ? 'border-red-500/50 bg-red-500/5'
+                : addMode === 'youtube' ? 'border-red-500/30 bg-red-500/5'
+                : 'border-cyan-500/30 bg-cyan-500/5'
             }`}>
               <input
-                type="text"
-                value={inputValue}
+                type="text" value={inputValue}
                 onChange={e => { setInputValue(e.target.value); setInputError(false); }}
                 onKeyDown={e => e.key === 'Enter' && handleAddUrl()}
                 placeholder={addMode === 'youtube' ? t.player.youtubePlaceholder : t.player.urlPlaceholder}
                 className="flex-1 bg-transparent text-white text-sm placeholder-gray-600 outline-none"
                 autoFocus
               />
-              {inputError && (
-                <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 self-center" />
-              )}
-              <button
-                onClick={handleAddUrl}
-                disabled={fetchingTitle}
+              {inputError && <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 self-center" />}
+              <button onClick={handleAddUrl} disabled={fetchingTitle}
                 className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-all disabled:opacity-60 ${
-                  addMode === 'youtube'
-                    ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30'
-                    : 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30'
+                  addMode === 'youtube' ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30'
                 }`}
               >
                 {fetchingTitle
@@ -631,14 +500,12 @@ export default function MediaPlayerView() {
                 {fetchingTitle ? t.player.loading : t.player.add}
               </button>
             </div>
-            {inputError && (
-              <p className="text-xs text-red-400 mt-1 ml-3">{t.player.invalidUrl}</p>
-            )}
+            {inputError && <p className="text-xs text-red-400 mt-1 ml-3">{t.player.invalidUrl}</p>}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Now playing */}
+      {/* Now playing card */}
       <AnimatePresence mode="wait">
         {current && (
           <motion.div
@@ -652,56 +519,40 @@ export default function MediaPlayerView() {
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t.player.nowPlaying}</p>
             <p className="text-white font-semibold truncate mb-3">{current.title}</p>
 
-            {/* YouTube player container */}
-            <div
-              ref={ytContainerRef}
-              className="w-full rounded-2xl mb-3 overflow-hidden bg-black"
-              style={{
-                aspectRatio: '16/9',
-                display: current.type === 'youtube' ? 'block' : 'none',
-              }}
-            />
+            {/* YouTube embed */}
+            {current.type === 'youtube' && (
+              <div ref={ytContainerRef} className="w-full rounded-2xl mb-3 overflow-hidden bg-black"
+                style={{ aspectRatio: '16/9' }} />
+            )}
 
-            {/* Video element — moved from hidden to visible when needed */}
-            {current.type === 'video' && (() => {
-              // Make the persistent video element visible inside the player card
-              // We use a portal-like trick: render a placeholder and sync via JS
-              // Instead, we just show/hide via the ref style in a useEffect
-              return null;
-            })()}
-
-            {/* Seek + time */}
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs text-gray-500 tabular-nums w-9">
-                {formatTime(currentTime)}
-              </span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                step="0.1"
-                value={progress}
-                onChange={handleSeek}
-                className="flex-1 accent-blue-500"
-                style={{ height: '4px' }}
+            {/* Video file / video URL */}
+            {current.type === 'video' && (
+              <video
+                key={current.id}
+                ref={setVideoRef}
+                src={current.objectUrl ?? current.url ?? ''}
+                playsInline
+                controls={false}
+                className="w-full rounded-2xl mb-3 max-h-52 object-contain bg-black"
               />
-              <span className="text-xs text-gray-500 tabular-nums w-9 text-right">
-                {formatTime(duration)}
-              </span>
+            )}
+
+            {/* Seek bar */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs text-gray-500 tabular-nums w-9">{formatTime(currentTime)}</span>
+              <input type="range" min="0" max="100" step="0.1" value={progress}
+                onChange={handleSeek}
+                className="flex-1 accent-blue-500" style={{ height: '4px' }} />
+              <span className="text-xs text-gray-500 tabular-nums w-9 text-right">{formatTime(duration)}</span>
             </div>
 
-            {/* Playback controls */}
+            {/* Controls */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => skipTrack(-1)}
-                  className="text-gray-500 hover:text-white transition-colors"
-                >
+                <button onClick={() => skipTrack(-1)} className="text-gray-500 hover:text-white transition-colors">
                   <SkipBack className="w-5 h-5" />
                 </button>
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={togglePlay}
+                <motion.button whileTap={{ scale: 0.9 }} onClick={togglePlay}
                   className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/40"
                 >
                   {isPlaying
@@ -709,47 +560,27 @@ export default function MediaPlayerView() {
                     : <Play className="w-5 h-5 text-white ml-0.5" />
                   }
                 </motion.button>
-                <button
-                  onClick={() => skipTrack(1)}
-                  className="text-gray-500 hover:text-white transition-colors"
-                >
+                <button onClick={() => skipTrack(1)} className="text-gray-500 hover:text-white transition-colors">
                   <SkipForward className="w-5 h-5" />
                 </button>
               </div>
               <div className="flex items-center gap-2">
                 <Volume2 className="w-4 h-4 text-gray-500" />
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={volume}
+                <input type="range" min="0" max="100" value={volume}
                   onChange={e => handleVolumeChange(Number(e.target.value))}
-                  className="w-16 accent-blue-500"
-                />
+                  className="w-16 accent-blue-500" />
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/*
-        Video element display — shown here so it's always in the DOM but
-        repositioned visually. We control visibility via a useEffect.
-      */}
-      <VideoDisplay
-        videoRef={videoRef}
-        isVideo={current?.type === 'video'}
-        currentId={current?.id ?? null}
-      />
-
       {/* Playlist */}
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex items-center gap-2 mb-3">
           <ListMusic className="w-4 h-4 text-gray-500" />
           <p className="text-sm font-medium text-gray-400">{t.player.playlist}</p>
-          {entries.length > 0 && (
-            <span className="text-xs text-gray-600 ml-auto">{entries.length}</span>
-          )}
+          {entries.length > 0 && <span className="text-xs text-gray-600 ml-auto">{entries.length}</span>}
         </div>
 
         {loading ? (
@@ -757,9 +588,7 @@ export default function MediaPlayerView() {
             <div className="w-6 h-6 border-2 border-white/20 border-t-blue-500 rounded-full animate-spin" />
           </div>
         ) : entries.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="flex flex-col items-center justify-center py-12 text-gray-600"
           >
             <Upload className="w-10 h-10 mb-3 opacity-40" />
@@ -785,11 +614,7 @@ export default function MediaPlayerView() {
                   <div className="relative flex-shrink-0">
                     {entry.type === 'youtube' && entry.thumbnail ? (
                       <div className="w-10 h-8 rounded-lg overflow-hidden bg-black">
-                        <img
-                          src={entry.thumbnail}
-                          alt=""
-                          className="w-full h-full object-cover opacity-80"
-                        />
+                        <img src={entry.thumbnail} alt="" className="w-full h-full object-cover opacity-80" />
                       </div>
                     ) : (
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${typeIconBg(entry.type)}`}>
@@ -797,17 +622,14 @@ export default function MediaPlayerView() {
                       </div>
                     )}
                     {currentId === entry.id && isPlaying && (
-                      <motion.div
-                        className="absolute inset-0 rounded-lg border-2 border-blue-400"
+                      <motion.div className="absolute inset-0 rounded-lg border-2 border-blue-400"
                         animate={{ opacity: [1, 0.3, 1] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
                       />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className={`text-sm truncate block ${
-                      currentId === entry.id ? 'text-white font-medium' : 'text-gray-300'
-                    }`}>
+                    <span className={`text-sm truncate block ${currentId === entry.id ? 'text-white font-medium' : 'text-gray-300'}`}>
                       {entry.title}
                     </span>
                     <span className="text-xs text-gray-600 capitalize">{entry.type}</span>
@@ -826,23 +648,4 @@ export default function MediaPlayerView() {
       </div>
     </motion.div>
   );
-}
-
-// ── VideoDisplay ──────────────────────────────────────────────────────
-// Keeps the <video> always in the DOM (so videoRef is always valid),
-// but shows/hides it and moves it visually based on current track type.
-interface VideoDisplayProps {
-  videoRef: React.RefObject<HTMLVideoElement>;
-  isVideo: boolean;
-  currentId: string | null;
-}
-
-function VideoDisplay({ videoRef, isVideo, currentId }: VideoDisplayProps) {
-  useEffect(() => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.style.display = isVideo ? 'block' : 'none';
-  }, [isVideo, currentId, videoRef]);
-
-  return null;
 }
