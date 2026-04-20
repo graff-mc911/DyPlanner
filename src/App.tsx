@@ -1,114 +1,93 @@
 import { useState } from 'react'
-import { LayoutGrid, Calendar, BookOpen, Music, Settings } from 'lucide-react'
-import { Planner } from './components/Planner'
-import { Reader } from './components/Reader'
-import { Player } from './components/Player'
-import { SettingsPanel } from './components/Settings'
+import { Timer, CheckSquare, Flame, HelpCircle, Music, BookOpen, Settings } from 'lucide-react'
+import WelcomeScreen from './components/WelcomeScreen'
+import FocusTimer from './components/FocusTimer'
+import DailyPlanner from './components/DailyPlanner'
+import HabitTracker from './components/HabitTracker'
+import DecisionTool from './components/DecisionTool'
+import MediaPlayerView from './components/MediaPlayerView'
+import BookReaderView from './components/BookReaderView'
+import SettingsView from './components/SettingsView'
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext'
 
-type View = 'home' | 'planner' | 'reader' | 'player' | 'settings'
+type Tab = 'focus' | 'tasks' | 'habits' | 'decide' | 'player' | 'reader' | 'settings'
+type AppTheme = 'dark' | 'light'
 
-export default function App() {
-  const [view, setView] = useState<View>('home')
-  const [language, setLanguage] = useState<'uk' | 'en'>('uk')
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+function AppContent() {
+  const { t } = useLanguage()
+  const [showWelcome, setShowWelcome] = useState(() => {
+    return !localStorage.getItem('focus_one_visited')
+  })
+  const [activeTab, setActiveTab] = useState<Tab>('focus')
+  const [theme, setTheme] = useState<AppTheme>(() => {
+    return (localStorage.getItem('focus_one_theme') as AppTheme) || 'dark'
+  })
 
-  const t = {
-    uk: {
-      title: 'DyPlanner Universal',
-      planner: 'Планер',
-      reader: 'Читалка',
-      player: 'Плеєр',
-      settings: 'Налаштування',
-      back: '← Назад'
-    },
-    en: {
-      title: 'DyPlanner Universal',
-      planner: 'Planner',
-      reader: 'Reader',
-      player: 'Player',
-      settings: 'Settings',
-      back: '← Back'
-    }
-  }[language]
-
-  if (view !== 'home') {
-    return (
-      <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-gray-50 text-gray-900'}`}>
-        <div className="p-4">
-          <button
-            onClick={() => setView('home')}
-            className="mb-4 px-4 py-2 bg-sky-600 hover:bg-sky-700 rounded-lg text-white transition-colors"
-          >
-            {t.back}
-          </button>
-          
-          {view === 'planner' && <Planner language={language} />}
-          {view === 'reader' && <Reader language={language} />}
-          {view === 'player' && <Player language={language} />}
-          {view === 'settings' && (
-            <SettingsPanel 
-              language={language} 
-              setLanguage={setLanguage}
-              theme={theme}
-              setTheme={setTheme}
-            />
-          )}
-        </div>
-      </div>
-    )
+  const handleDismissWelcome = () => {
+    localStorage.setItem('focus_one_visited', 'true')
+    setShowWelcome(false)
   }
 
+  const handleThemeChange = (newTheme: AppTheme) => {
+    setTheme(newTheme)
+    localStorage.setItem('focus_one_theme', newTheme)
+  }
+
+  const tabs: { id: Tab; icon: React.ReactNode; label: string }[] = [
+    { id: 'focus', icon: <Timer className="w-5 h-5" />, label: t.tabs.focus },
+    { id: 'tasks', icon: <CheckSquare className="w-5 h-5" />, label: t.tabs.tasks },
+    { id: 'habits', icon: <Flame className="w-5 h-5" />, label: t.tabs.habits },
+    { id: 'decide', icon: <HelpCircle className="w-5 h-5" />, label: t.tabs.decide },
+    { id: 'player', icon: <Music className="w-5 h-5" />, label: t.tabs.player },
+    { id: 'reader', icon: <BookOpen className="w-5 h-5" />, label: t.tabs.reader },
+    { id: 'settings', icon: <Settings className="w-5 h-5" />, label: t.tabs.settings },
+  ]
+
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-gray-50 text-gray-900'}`}>
-      <div className="p-4 max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8 pt-8">{t.title}</h1>
-        
-        <div className="grid grid-cols-2 gap-4 h-[calc(100vh-200px)] min-h-[400px]">
-          {/* Planner */}
-          <button
-            onClick={() => setView('planner')}
-            className="relative group rounded-2xl overflow-hidden bg-gradient-to-br from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 transition-all hover:scale-[1.02]"
-          >
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <Calendar size={64} className="mb-4" />
-              <span className="text-2xl font-bold">{t.planner}</span>
-            </div>
-          </button>
+    <div className="min-h-screen bg-black text-white flex flex-col max-w-md mx-auto relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-950/40 via-black to-black pointer-events-none" />
 
-          {/* Reader */}
-          <button
-            onClick={() => setView('reader')}
-            className="relative group rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition-all hover:scale-[1.02]"
-          >
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <BookOpen size={64} className="mb-4" />
-              <span className="text-2xl font-bold">{t.reader}</span>
-            </div>
-          </button>
+      {showWelcome && <WelcomeScreen onDismiss={handleDismissWelcome} />}
 
-          {/* Player */}
-          <button
-            onClick={() => setView('player')}
-            className="relative group rounded-2xl overflow-hidden bg-gradient-to-br from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 transition-all hover:scale-[1.02]"
-          >
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <Music size={64} className="mb-4" />
-              <span className="text-2xl font-bold">{t.player}</span>
-            </div>
-          </button>
-
-          {/* Settings */}
-          <button
-            onClick={() => setView('settings')}
-            className="relative group rounded-2xl overflow-hidden bg-gradient-to-br from-slate-600 to-slate-700 hover:from-slate-500 hover:to-slate-600 transition-all hover:scale-[1.02]"
-          >
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <Settings size={64} className="mb-4" />
-              <span className="text-2xl font-bold">{t.settings}</span>
-            </div>
-          </button>
-        </div>
+      <div className="flex-1 overflow-auto relative z-10 pb-20">
+        {activeTab === 'focus' && <FocusTimer />}
+        {activeTab === 'tasks' && <DailyPlanner />}
+        {activeTab === 'habits' && <HabitTracker />}
+        {activeTab === 'decide' && <DecisionTool />}
+        {activeTab === 'player' && <MediaPlayerView />}
+        {activeTab === 'reader' && <BookReaderView />}
+        {activeTab === 'settings' && <SettingsView theme={theme} onThemeChange={handleThemeChange} />}
       </div>
+
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-black/85 backdrop-blur-xl border-t border-white/10 z-20">
+        <div className="flex overflow-x-auto scrollbar-hide">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative flex flex-col items-center justify-center py-2.5 px-3 gap-1 transition-all flex-shrink-0 flex-1 min-w-[58px] ${
+                activeTab === tab.id
+                  ? 'text-blue-400'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+            >
+              {tab.icon}
+              <span className="text-[10px] font-medium leading-tight text-center whitespace-nowrap">{tab.label}</span>
+              {activeTab === tab.id && (
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-gradient-to-r from-blue-500 to-blue-400 rounded-full" />
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   )
 }
