@@ -15,6 +15,15 @@ interface MediaEntry extends StoredMedia {
 
 type AddMode = null | 'youtube' | 'url';
 
+const VIDEO_EXTS = /\.(mp4|webm|ogv|mov|avi|mkv|m4v)(\?|#|$)/i;
+const AUDIO_EXTS = /\.(mp3|wav|ogg|flac|aac|m4a|opus|weba)(\?|#|$)/i;
+
+function detectUrlMediaType(url: string): 'audio' | 'video' | 'url' {
+  if (VIDEO_EXTS.test(url)) return 'video';
+  if (AUDIO_EXTS.test(url)) return 'audio';
+  return 'url';
+}
+
 async function fetchYouTubeTitle(url: string): Promise<string | null> {
   try {
     const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
@@ -62,7 +71,7 @@ function typeIconBg(type: MediaSourceType) {
 declare global {
   interface Window {
     YT: {
-      Player: new (el: HTMLElement | string, opts: object) => YTPlayer;
+      Player: new (el: HTMLElement, opts: object) => YTPlayer;
       PlayerState: { ENDED: number; PLAYING: number; PAUSED: number };
     };
     onYouTubeIframeAPIReady?: () => void;
@@ -72,7 +81,6 @@ declare global {
 interface YTPlayer {
   playVideo(): void;
   pauseVideo(): void;
-  stopVideo(): void;
   seekTo(seconds: number, allowSeekAhead?: boolean): void;
   setVolume(v: number): void;
   getCurrentTime(): number;
@@ -94,7 +102,8 @@ export default function MediaPlayerView() {
   const [inputError, setInputError] = useState(false);
   const [fetchingTitle, setFetchingTitle] = useState(false);
 
-  const mediaRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const ytPlayerRef = useRef<YTPlayer | null>(null);
   const ytContainerRef = useRef<HTMLDivElement>(null);
   const ytTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -113,6 +122,7 @@ export default function MediaPlayerView() {
   const current = entries.find(e => e.id === currentId) ?? null;
   const isYT = current?.type === 'youtube';
 
+  // ── Load persisted media ──────────────────────────────────────────
   useEffect(() => {
     loadAllMedia().then(items => {
       const loaded: MediaEntry[] = items.map(item => ({
@@ -128,14 +138,11 @@ export default function MediaPlayerView() {
     };
   }, []);
 
+  // ── YouTube IFrame API ────────────────────────────────────────────
   const loadYTApi = useCallback((): Promise<void> => {
     if (ytApiReady.current && window.YT?.Player) return Promise.resolve();
     return new Promise(resolve => {
-      if (window.YT?.Player) {
-        ytApiReady.current = true;
-        resolve();
-        return;
-      }
+      if (window.YT?.Player) { ytApiReady.current = true; resolve(); return; }
       const prev = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = () => {
         ytApiReady.current = true;
@@ -157,16 +164,13 @@ export default function MediaPlayerView() {
     if (!cid || list.length === 0) return;
     const idx = list.findIndex(e => e.id === cid);
     if (idx < 0 || idx >= list.length - 1) {
-      setIsPlaying(false);
-      setCurrentTime(0);
+      setIsPlaying(false); setCurrentTime(0);
       return;
     }
     const next = list[idx + 1];
     setCurrentId(next.id);
     currentIdRef.current = next.id;
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
+    setIsPlaying(false); setCurrentTime(0); setDuration(0);
   }, []);
 
   const destroyYT = useCallback(() => {
@@ -174,17 +178,14 @@ export default function MediaPlayerView() {
     if (ytPlayerRef.current) { try { ytPlayerRef.current.destroy(); } catch (_) {} ytPlayerRef.current = null; }
   }, []);
 
+  // ── YouTube player lifecycle ──────────────────────────────────────
   useEffect(() => {
-    if (!current || current.type !== 'youtube') {
-      destroyYT();
-      return;
-    }
+    if (!current || current.type !== 'youtube') { destroyYT(); return; }
     if (!current.url) return;
     const videoId = extractYouTubeId(current.url);
     if (!videoId) return;
 
     let cancelled = false;
-
     loadYTApi().then(() => {
       if (cancelled || !ytContainerRef.current) return;
       destroyYT();
@@ -215,18 +216,29 @@ export default function MediaPlayerView() {
             if (e.data === window.YT.PlayerState.PLAYING) setIsPlaying(true);
             if (e.data === window.YT.PlayerState.PAUSED) setIsPlaying(false);
             if (e.data === window.YT.PlayerState.ENDED) {
-              setIsPlaying(false);
-              setCurrentTime(0);
-              advanceToNext();
+              setIsPlaying(false); setCurrentTime(0); advanceToNext();
             }
           },
         },
       });
     });
-
     return () => { cancelled = true; };
   }, [current?.id, current?.type]);
 
+  // ── Audio/video element playback on track change ──────────────────
+  useEffect(() => {
+    if (!current || current.type === 'youtube' || current.type === 'url') return;
+    const el = current.type === 'video' ? videoRef.current : audioRef.current;
+    if (!el) return;
+    const src = current.objectUrl ?? current.url ?? '';
+    if (!src) return;
+    el.src = src;
+    el.volume = volumeRef.current / 100;
+    el.load();
+    el.play().catch(() => {});
+  }, [current?.id]);
+
+  // ── File upload ───────────────────────────────────────────────────
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'audio' | 'video') => {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
@@ -234,19 +246,20 @@ export default function MediaPlayerView() {
     const newEntries: MediaEntry[] = [];
     for (const file of Array.from(fileList)) {
       const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const blob = new Blob([await file.arrayBuffer()], { type: file.type });
-      const item: StoredMedia = { id, title: file.name.replace(/\.[^/.]+$/, ''), type, blob };
+      const item: StoredMedia = { id, title: file.name.replace(/\.[^/.]+$/, ''), type, blob: file };
       await saveMedia(item);
-      newEntries.push({ ...item, objectUrl: URL.createObjectURL(blob) });
+      newEntries.push({ ...item, objectUrl: URL.createObjectURL(file) });
     }
     setEntries(prev => [...prev, ...newEntries]);
-    if (!currentIdRef.current) {
-      setCurrentId(newEntries[0].id);
-      currentIdRef.current = newEntries[0].id;
+    if (!currentIdRef.current && newEntries.length > 0) {
+      const first = newEntries[0];
+      setCurrentId(first.id);
+      currentIdRef.current = first.id;
       setIsPlaying(false); setCurrentTime(0); setDuration(0);
     }
   };
 
+  // ── Add URL / YouTube ─────────────────────────────────────────────
   const handleAddUrl = async () => {
     const raw = inputValue.trim();
     if (!raw || fetchingTitle) return;
@@ -268,24 +281,23 @@ export default function MediaPlayerView() {
         thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
       };
       await saveMedia(item);
-      const entry: MediaEntry = { ...item };
-      setEntries(prev => [...prev, entry]);
+      setEntries(prev => [...prev, { ...item }]);
       if (!currentIdRef.current) {
         setCurrentId(id); currentIdRef.current = id;
         setIsPlaying(false); setCurrentTime(0); setDuration(0);
       }
     } else {
       try { new URL(raw); } catch { setInputError(true); return; }
+      const detectedType = detectUrlMediaType(raw);
       setFetchingTitle(true);
-      const fetched = await fetchPageTitle(raw);
+      const fetched = detectedType === 'url' ? await fetchPageTitle(raw) : await fetchYouTubeTitle(raw).then(() => null).catch(() => null);
       setFetchingTitle(false);
-      const fallback = raw.split('/').filter(Boolean).pop()?.split('?')[0] || raw;
+      const fallback = raw.split('/').filter(Boolean).pop()?.split('?')[0] || 'Media';
       const title = fetched || fallback;
       const id = `url_${Date.now()}`;
-      const item: StoredMedia = { id, title, type: 'url', url: raw };
+      const item: StoredMedia = { id, title, type: detectedType, url: raw };
       await saveMedia(item);
-      const entry: MediaEntry = { ...item };
-      setEntries(prev => [...prev, entry]);
+      setEntries(prev => [...prev, { ...item }]);
       if (!currentIdRef.current) {
         setCurrentId(id); currentIdRef.current = id;
         setIsPlaying(false); setCurrentTime(0); setDuration(0);
@@ -296,14 +308,14 @@ export default function MediaPlayerView() {
     setAddMode(null);
   };
 
+  // ── Controls ──────────────────────────────────────────────────────
   const selectTrack = useCallback((id: string) => {
-    if (mediaRef.current) mediaRef.current.pause();
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
+    if (videoRef.current) { videoRef.current.pause(); videoRef.current.src = ''; }
     destroyYT();
     setCurrentId(id);
     currentIdRef.current = id;
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
+    setIsPlaying(false); setCurrentTime(0); setDuration(0);
   }, [destroyYT]);
 
   const togglePlay = useCallback(() => {
@@ -312,11 +324,11 @@ export default function MediaPlayerView() {
       else ytPlayerRef.current.playVideo();
       return;
     }
-    const el = mediaRef.current;
+    const el = current?.type === 'video' ? videoRef.current : audioRef.current;
     if (!el) return;
     if (isPlaying) el.pause();
     else { el.volume = volumeRef.current / 100; el.play().catch(() => {}); }
-  }, [isPlaying, isYT]);
+  }, [isPlaying, isYT, current?.type]);
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = Number(e.target.value);
@@ -325,7 +337,7 @@ export default function MediaPlayerView() {
       if (dur > 0) { ytPlayerRef.current.seekTo((val / 100) * dur, true); setCurrentTime((val / 100) * dur); }
       return;
     }
-    const el = mediaRef.current;
+    const el = current?.type === 'video' ? videoRef.current : audioRef.current;
     if (el && isFinite(el.duration)) {
       el.currentTime = (val / 100) * el.duration;
       setCurrentTime(el.currentTime);
@@ -343,7 +355,8 @@ export default function MediaPlayerView() {
 
   const removeEntry = async (id: string) => {
     if (currentIdRef.current === id) {
-      if (mediaRef.current) mediaRef.current.pause();
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current.src = ''; }
+      if (videoRef.current) { videoRef.current.pause(); videoRef.current.src = ''; }
       destroyYT();
     }
     await deleteMedia(id);
@@ -363,31 +376,25 @@ export default function MediaPlayerView() {
   const handleVolumeChange = (val: number) => {
     setVolume(val);
     volumeRef.current = val;
-    if (mediaRef.current) mediaRef.current.volume = val / 100;
+    if (audioRef.current) audioRef.current.volume = val / 100;
+    if (videoRef.current) videoRef.current.volume = val / 100;
     if (ytPlayerRef.current) ytPlayerRef.current.setVolume(val);
   };
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-
-  const setMediaRef = useCallback((el: HTMLAudioElement | HTMLVideoElement | null) => {
-    mediaRef.current = el;
+  // ── Shared media element event wiring ────────────────────────────
+  const wireMediaEl = useCallback((el: HTMLAudioElement | HTMLVideoElement | null, ref: React.MutableRefObject<HTMLAudioElement | HTMLVideoElement | null>) => {
+    ref.current = el;
     if (!el) return;
     el.volume = volumeRef.current / 100;
-    el.onloadedmetadata = () => {
-      setDuration(el.duration);
-      el.volume = volumeRef.current / 100;
-      el.play().catch(() => {});
-    };
     el.ontimeupdate = () => setCurrentTime(el.currentTime);
+    el.ondurationchange = () => { if (isFinite(el.duration)) setDuration(el.duration); };
     el.onplay = () => setIsPlaying(true);
     el.onpause = () => setIsPlaying(false);
-    el.onended = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-      advanceToNext();
-    };
+    el.onended = () => { setIsPlaying(false); setCurrentTime(0); advanceToNext(); };
+    el.onerror = () => setIsPlaying(false);
   }, [advanceToNext]);
 
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const srcForEntry = (entry: MediaEntry) => entry.objectUrl ?? entry.url ?? '';
 
   return (
@@ -402,11 +409,20 @@ export default function MediaPlayerView() {
         <p className="text-gray-400 text-sm">{t.player.supported}</p>
       </div>
 
+      {/* Hidden file inputs */}
       <input ref={audioFileRef} type="file" accept="audio/*" multiple className="hidden"
         onChange={e => handleFileUpload(e, 'audio')} />
       <input ref={videoFileRef} type="file" accept="video/*" multiple className="hidden"
         onChange={e => handleFileUpload(e, 'video')} />
 
+      {/* Persistent media elements — never unmounted */}
+      <audio
+        ref={el => wireMediaEl(el, audioRef as React.MutableRefObject<HTMLAudioElement | HTMLVideoElement | null>)}
+        preload="auto"
+        style={{ display: 'none' }}
+      />
+
+      {/* Action buttons */}
       <div className="grid grid-cols-4 gap-2 mb-4">
         <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
           onClick={() => audioFileRef.current?.click()}
@@ -450,6 +466,7 @@ export default function MediaPlayerView() {
         </motion.button>
       </div>
 
+      {/* URL input */}
       <AnimatePresence>
         {addMode && (
           <motion.div
@@ -480,16 +497,15 @@ export default function MediaPlayerView() {
                   ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
                   : <Plus className="w-3 h-3" />
                 }
-                {fetchingTitle ? t.player.loading ?? 'Loading...' : t.player.add}
+                {fetchingTitle ? t.player.loading : t.player.add}
               </button>
             </div>
-            {inputError && (
-              <p className="text-xs text-red-400 mt-1 ml-3">{t.player.invalidUrl}</p>
-            )}
+            {inputError && <p className="text-xs text-red-400 mt-1 ml-3">{t.player.invalidUrl}</p>}
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Now playing */}
       <AnimatePresence mode="wait">
         {current && (
           <motion.div
@@ -503,28 +519,24 @@ export default function MediaPlayerView() {
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t.player.nowPlaying}</p>
             <p className="text-white font-semibold truncate mb-3">{current.title}</p>
 
-            {current.type === 'youtube' ? (
-              <div
-                ref={ytContainerRef}
-                className="w-full rounded-2xl mb-3 overflow-hidden bg-black"
-                style={{ aspectRatio: '16/9' }}
-              />
-            ) : current.type === 'video' ? (
+            {/* YouTube player container */}
+            <div
+              ref={ytContainerRef}
+              className={`w-full rounded-2xl mb-3 overflow-hidden bg-black ${current.type === 'youtube' ? 'block' : 'hidden'}`}
+              style={{ aspectRatio: '16/9' }}
+            />
+
+            {/* Video element — persistent, shown only for video type */}
+            {current.type === 'video' && (
               <video
-                key={current.id}
-                ref={el => setMediaRef(el)}
+                ref={el => wireMediaEl(el, videoRef as React.MutableRefObject<HTMLAudioElement | HTMLVideoElement | null>)}
                 src={srcForEntry(current)}
-                className="w-full rounded-2xl mb-3 max-h-44 object-cover bg-black"
-              />
-            ) : (
-              <audio
-                key={current.id}
-                ref={el => setMediaRef(el)}
-                src={srcForEntry(current)}
-                preload="auto"
+                className="w-full rounded-2xl mb-3 max-h-52 object-contain bg-black"
+                playsInline
               />
             )}
 
+            {/* Seek + time */}
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs text-gray-500 tabular-nums w-9">{formatTime(currentTime)}</span>
               <input
@@ -537,6 +549,7 @@ export default function MediaPlayerView() {
               <span className="text-xs text-gray-500 tabular-nums w-9 text-right">{formatTime(duration)}</span>
             </div>
 
+            {/* Playback controls */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <button onClick={() => skipTrack(-1)} className="text-gray-500 hover:text-white transition-colors">
@@ -569,6 +582,7 @@ export default function MediaPlayerView() {
         )}
       </AnimatePresence>
 
+      {/* Playlist */}
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex items-center gap-2 mb-3">
           <ListMusic className="w-4 h-4 text-gray-500" />
