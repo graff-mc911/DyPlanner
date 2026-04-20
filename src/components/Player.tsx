@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Play, Pause, SkipBack, SkipForward, Volume2, Music, Video } from 'lucide-react'
+import { Upload, Play, Pause, SkipBack, SkipForward, Volume2, Music, Video } from 'lucide-react'
 
 interface MediaFile {
   id: string
@@ -78,6 +78,12 @@ export function Player({ language }: { language: 'uk' | 'en' }) {
     if (videoRef.current) {
       isPlaying ? videoRef.current.pause() : videoRef.current.play()
     }
+  }
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   return (
@@ -165,7 +171,7 @@ export function Player({ language }: { language: 'uk' | 'en' }) {
           <audio
             ref={audioRef}
             src={currentFile.file && currentFile.type === 'audio' ? URL.createObjectURL(currentFile.file) : ''}
-            onTimeUpdate={(e) => { const t = e.target as HTMLAudioElement; setProgress((t.currentTime / t.duration) * 100) }}
+            onTimeUpdate={(e) => setProgress((e.target.currentTime / e.target.duration) * 100)}
             onEnded={() => setIsPlaying(false)}
           />
         </div>
