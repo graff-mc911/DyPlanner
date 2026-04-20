@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Task, UUID, TaskStatus, TaskPriority } from '../types'
+import type { Task, UUID } from '../types'
 import { v4 as uuidv4 } from 'uuid'
 
 interface PlannerState {
