@@ -79,6 +79,7 @@ interface Translations {
     youtubePlaceholder: string;
     invalidUrl: string;
     add: string;
+    loading: string;
   };
   reader: {
     title: string;
@@ -169,6 +170,7 @@ export const translations: Record<Language, Translations> = {
       youtubePlaceholder: 'Paste YouTube URL or video ID',
       invalidUrl: 'Invalid URL or YouTube link',
       add: 'Add',
+      loading: 'Loading...',
     },
     reader: {
       title: 'Book Reader',
@@ -243,7 +245,7 @@ export const translations: Record<Language, Translations> = {
       dontLose: '¿Qué pierdo si no lo hago?',
       cardPlaceholder: 'Escribe tus pensamientos...',
     },
-    player: { title: 'Reproductor', uploadAudio: 'Subir Audio', uploadVideo: 'Subir Video', addUrl: 'Agregar URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Sin archivos.', nowPlaying: 'Reproduciendo', playlist: 'Lista', urlPlaceholder: 'Pegar URL de medios (mp3, mp4...)', youtubePlaceholder: 'Pegar URL o ID de YouTube', invalidUrl: 'URL o enlace de YouTube inválido', add: 'Agregar' },
+    player: { title: 'Reproductor', uploadAudio: 'Subir Audio', uploadVideo: 'Subir Video', addUrl: 'Agregar URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Sin archivos.', nowPlaying: 'Reproduciendo', playlist: 'Lista', urlPlaceholder: 'Pegar URL de medios (mp3, mp4...)', youtubePlaceholder: 'Pegar URL o ID de YouTube', invalidUrl: 'URL o enlace de YouTube inválido', add: 'Agregar', loading: 'Cargando...' },
     reader: { title: 'Lector de Libros', upload: 'Subir Libro', supported: 'EPUB, PDF, TXT, FB2', empty: 'Sin libros. Sube un archivo.', page: 'Pág.', of: 'de', backToLibrary: 'Biblioteca', fontSize: 'Tamaño de fuente', previewText: 'El contenido del libro aparecerá aquí.' },
     settings: { title: 'Ajustes', languageLabel: 'Idioma', themeLabel: 'Tema', dark: 'Oscuro', light: 'Claro' },
     footer: 'Una herramienta. $1. Para claridad.',
@@ -301,7 +303,7 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Que perds-je si je ne fais pas?',
       cardPlaceholder: 'Écrivez vos pensées...',
     },
-    player: { title: 'Lecteur Média', uploadAudio: 'Charger Audio', uploadVideo: 'Charger Vidéo', addUrl: 'Ajouter URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Pas de fichiers.', nowPlaying: 'En cours', playlist: 'Playlist', urlPlaceholder: 'Coller l\'URL (mp3, mp4...)', youtubePlaceholder: 'Coller l\'URL ou ID YouTube', invalidUrl: 'URL ou lien YouTube invalide', add: 'Ajouter' },
+    player: { title: 'Lecteur Média', uploadAudio: 'Charger Audio', uploadVideo: 'Charger Vidéo', addUrl: 'Ajouter URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Pas de fichiers.', nowPlaying: 'En cours', playlist: 'Playlist', urlPlaceholder: 'Coller l\'URL (mp3, mp4...)', youtubePlaceholder: 'Coller l\'URL ou ID YouTube', invalidUrl: 'URL ou lien YouTube invalide', add: 'Ajouter', loading: 'Chargement...' },
     reader: { title: 'Lecteur de Livres', upload: 'Charger un Livre', supported: 'EPUB, PDF, TXT, FB2', empty: 'Pas de livres. Chargez un fichier.', page: 'Page', of: 'sur', backToLibrary: 'Bibliothèque', fontSize: 'Taille du texte', previewText: 'Le contenu du livre apparaîtra ici.' },
     settings: { title: 'Réglages', languageLabel: 'Langue', themeLabel: 'Thème', dark: 'Sombre', light: 'Clair' },
     footer: 'Un outil. $1. Pour la clarté.',
@@ -359,7 +361,7 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Was verliere ich, wenn ich es nicht tue?',
       cardPlaceholder: 'Schreibe deine Gedanken...',
     },
-    player: { title: 'Media Player', uploadAudio: 'Audio laden', uploadVideo: 'Video laden', addUrl: 'URL hinzufügen', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Keine Dateien.', nowPlaying: 'Spielt', playlist: 'Playlist', urlPlaceholder: 'Medien-URL einfügen (mp3, mp4...)', youtubePlaceholder: 'YouTube-URL oder Video-ID einfügen', invalidUrl: 'Ungültige URL oder YouTube-Link', add: 'Hinzufügen' },
+    player: { title: 'Media Player', uploadAudio: 'Audio laden', uploadVideo: 'Video laden', addUrl: 'URL hinzufügen', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Keine Dateien.', nowPlaying: 'Spielt', playlist: 'Playlist', urlPlaceholder: 'Medien-URL einfügen (mp3, mp4...)', youtubePlaceholder: 'YouTube-URL oder Video-ID einfügen', invalidUrl: 'Ungültige URL oder YouTube-Link', add: 'Hinzufügen', loading: 'Laden...' },
     reader: { title: 'Buchleser', upload: 'Buch laden', supported: 'EPUB, PDF, TXT, FB2', empty: 'Keine Bücher. Lade eine Datei hoch.', page: 'Seite', of: 'von', backToLibrary: 'Bibliothek', fontSize: 'Schriftgröße', previewText: 'Buchinhalt erscheint hier.' },
     settings: { title: 'Einstellungen', languageLabel: 'Sprache', themeLabel: 'Thema', dark: 'Dunkel', light: 'Hell' },
     footer: 'Ein Werkzeug. $1. Für Klarheit.',
@@ -417,7 +419,7 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Що я втрачу, якщо не зроблю?',
       cardPlaceholder: 'Напиши свої думки...',
     },
-    player: { title: 'Медіа-плеєр', uploadAudio: 'Аудіо з пристрою', uploadVideo: 'Відео з пристрою', addUrl: 'Пряме посилання', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Немає файлів. Завантажте медіа або додайте посилання.', nowPlaying: 'Зараз грає', playlist: 'Плейлист', urlPlaceholder: 'Вставте пряме посилання на медіа (mp3, mp4...)', youtubePlaceholder: 'Вставте посилання YouTube або ID відео', invalidUrl: 'Невірне посилання YouTube або URL', add: 'Додати' },
+    player: { title: 'Медіа-плеєр', uploadAudio: 'Аудіо з пристрою', uploadVideo: 'Відео з пристрою', addUrl: 'Пряме посилання', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Немає файлів. Завантажте медіа або додайте посилання.', nowPlaying: 'Зараз грає', playlist: 'Плейлист', urlPlaceholder: 'Вставте пряме посилання на медіа (mp3, mp4...)', youtubePlaceholder: 'Вставте посилання YouTube або ID відео', invalidUrl: 'Невірне посилання YouTube або URL', add: 'Додати', loading: 'Завантаження...' },
     reader: { title: 'Читалка книг', upload: 'Завантажити книгу', supported: 'EPUB, PDF, TXT, FB2', empty: 'Немає книг. Завантажте файл.', page: 'Стор.', of: 'з', backToLibrary: 'Бібліотека', fontSize: 'Розмір шрифту', previewText: 'Вміст книги відображатиметься тут. Підтримується EPUB та PDF.' },
     settings: { title: 'Налаштування', languageLabel: 'Мова', themeLabel: 'Тема', dark: 'Темна', light: 'Світла' },
     footer: 'Один інструмент. $1. Для ясності.',
@@ -475,7 +477,7 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'O que perco se eu não fizer?',
       cardPlaceholder: 'Escreva seus pensamentos...',
     },
-    player: { title: 'Player de Mídia', uploadAudio: 'Carregar Áudio', uploadVideo: 'Carregar Vídeo', addUrl: 'Adicionar URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Sem arquivos.', nowPlaying: 'Tocando', playlist: 'Playlist', urlPlaceholder: 'Colar URL de mídia (mp3, mp4...)', youtubePlaceholder: 'Colar URL ou ID do YouTube', invalidUrl: 'URL ou link do YouTube inválido', add: 'Adicionar' },
+    player: { title: 'Player de Mídia', uploadAudio: 'Carregar Áudio', uploadVideo: 'Carregar Vídeo', addUrl: 'Adicionar URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Sem arquivos.', nowPlaying: 'Tocando', playlist: 'Playlist', urlPlaceholder: 'Colar URL de mídia (mp3, mp4...)', youtubePlaceholder: 'Colar URL ou ID do YouTube', invalidUrl: 'URL ou link do YouTube inválido', add: 'Adicionar', loading: 'Carregando...' },
     reader: { title: 'Leitor de Livros', upload: 'Carregar Livro', supported: 'EPUB, PDF, TXT, FB2', empty: 'Sem livros. Carregue um arquivo.', page: 'Pág.', of: 'de', backToLibrary: 'Biblioteca', fontSize: 'Tamanho da fonte', previewText: 'O conteúdo do livro aparecerá aqui.' },
     settings: { title: 'Configurações', languageLabel: 'Idioma', themeLabel: 'Tema', dark: 'Escuro', light: 'Claro' },
     footer: 'Uma ferramenta. $1. Para clareza.',
@@ -533,7 +535,7 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Cosa perdo se non lo faccio?',
       cardPlaceholder: 'Scrivi i tuoi pensieri...',
     },
-    player: { title: 'Lettore Multimediale', uploadAudio: 'Carica Audio', uploadVideo: 'Carica Video', addUrl: 'Aggiungi URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Nessun file.', nowPlaying: 'In riproduzione', playlist: 'Playlist', urlPlaceholder: 'Incolla URL media (mp3, mp4...)', youtubePlaceholder: 'Incolla URL o ID YouTube', invalidUrl: 'URL o link YouTube non valido', add: 'Aggiungi' },
+    player: { title: 'Lettore Multimediale', uploadAudio: 'Carica Audio', uploadVideo: 'Carica Video', addUrl: 'Aggiungi URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Nessun file.', nowPlaying: 'In riproduzione', playlist: 'Playlist', urlPlaceholder: 'Incolla URL media (mp3, mp4...)', youtubePlaceholder: 'Incolla URL o ID YouTube', invalidUrl: 'URL o link YouTube non valido', add: 'Aggiungi', loading: 'Caricamento...' },
     reader: { title: 'Lettore di Libri', upload: 'Carica Libro', supported: 'EPUB, PDF, TXT, FB2', empty: 'Nessun libro. Carica un file.', page: 'Pag.', of: 'di', backToLibrary: 'Biblioteca', fontSize: 'Dimensione font', previewText: 'Il contenuto del libro apparirà qui.' },
     settings: { title: 'Impostazioni', languageLabel: 'Lingua', themeLabel: 'Tema', dark: 'Scuro', light: 'Chiaro' },
     footer: 'Uno strumento. $1. Per chiarezza.',
@@ -591,7 +593,7 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Co stracę, jeśli tego nie zrobię?',
       cardPlaceholder: 'Napisz swoje myśli...',
     },
-    player: { title: 'Odtwarzacz', uploadAudio: 'Wgraj Audio', uploadVideo: 'Wgraj Wideo', addUrl: 'Dodaj URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Brak plików.', nowPlaying: 'Odtwarzanie', playlist: 'Lista', urlPlaceholder: 'Wklej URL mediów (mp3, mp4...)', youtubePlaceholder: 'Wklej URL lub ID YouTube', invalidUrl: 'Nieprawidłowy URL lub link YouTube', add: 'Dodaj' },
+    player: { title: 'Odtwarzacz', uploadAudio: 'Wgraj Audio', uploadVideo: 'Wgraj Wideo', addUrl: 'Dodaj URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Brak plików.', nowPlaying: 'Odtwarzanie', playlist: 'Lista', urlPlaceholder: 'Wklej URL mediów (mp3, mp4...)', youtubePlaceholder: 'Wklej URL lub ID YouTube', invalidUrl: 'Nieprawidłowy URL lub link YouTube', add: 'Dodaj', loading: 'Ładowanie...' },
     reader: { title: 'Czytnik Książek', upload: 'Wgraj Książkę', supported: 'EPUB, PDF, TXT, FB2', empty: 'Brak książek. Wgraj plik.', page: 'Str.', of: 'z', backToLibrary: 'Biblioteka', fontSize: 'Rozmiar czcionki', previewText: 'Treść książki pojawi się tutaj.' },
     settings: { title: 'Ustawienia', languageLabel: 'Język', themeLabel: 'Motyw', dark: 'Ciemny', light: 'Jasny' },
     footer: 'Jedno narzędzie. $1. Dla jasności.',
@@ -649,7 +651,7 @@ export const translations: Record<Language, Translations> = {
       dontLose: 'Что я потеряю, если не сделаю?',
       cardPlaceholder: 'Напишите свои мысли...',
     },
-    player: { title: 'Медиа-плеер', uploadAudio: 'Загрузить аудио', uploadVideo: 'Загрузить видео', addUrl: 'Добавить URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Нет файлов.', nowPlaying: 'Сейчас играет', playlist: 'Плейлист', urlPlaceholder: 'Вставьте прямую ссылку (mp3, mp4...)', youtubePlaceholder: 'Вставьте ссылку YouTube или ID видео', invalidUrl: 'Неверная ссылка YouTube или URL', add: 'Добавить' },
+    player: { title: 'Медиа-плеер', uploadAudio: 'Загрузить аудио', uploadVideo: 'Загрузить видео', addUrl: 'Добавить URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: 'Нет файлов.', nowPlaying: 'Сейчас играет', playlist: 'Плейлист', urlPlaceholder: 'Вставьте прямую ссылку (mp3, mp4...)', youtubePlaceholder: 'Вставьте ссылку YouTube или ID видео', invalidUrl: 'Неверная ссылка YouTube или URL', add: 'Добавить', loading: 'Загрузка...' },
     reader: { title: 'Читалка книг', upload: 'Загрузить книгу', supported: 'EPUB, PDF, TXT, FB2', empty: 'Нет книг. Загрузите файл.', page: 'Стр.', of: 'из', backToLibrary: 'Библиотека', fontSize: 'Размер шрифта', previewText: 'Содержимое книги появится здесь. Поддерживается EPUB и PDF.' },
     settings: { title: 'Настройки', languageLabel: 'Язык', themeLabel: 'Тема', dark: 'Тёмная', light: 'Светлая' },
     footer: 'Один инструмент. $1. Для ясности.',
@@ -707,7 +709,7 @@ export const translations: Record<Language, Translations> = {
       dontLose: '如果我不这样做会失去什么？',
       cardPlaceholder: '写下你的想法...',
     },
-    player: { title: '媒体播放器', uploadAudio: '上传音频', uploadVideo: '上传视频', addUrl: '添加URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: '没有文件。', nowPlaying: '正在播放', playlist: '播放列表', urlPlaceholder: '粘贴媒体URL (mp3, mp4...)', youtubePlaceholder: '粘贴YouTube链接或视频ID', invalidUrl: '无效的URL或YouTube链接', add: '添加' },
+    player: { title: '媒体播放器', uploadAudio: '上传音频', uploadVideo: '上传视频', addUrl: '添加URL', addYoutube: 'YouTube', supported: 'MP3, WAV, OGG, MP4, WEBM · YouTube · URL', empty: '没有文件。', nowPlaying: '正在播放', playlist: '播放列表', urlPlaceholder: '粘贴媒体URL (mp3, mp4...)', youtubePlaceholder: '粘贴YouTube链接或视频ID', invalidUrl: '无效的URL或YouTube链接', add: '添加', loading: '加载中...' },
     reader: { title: '电子书阅读器', upload: '上传书籍', supported: 'EPUB, PDF, TXT, FB2', empty: '没有书籍。请上传文件。', page: '页', of: '共', backToLibrary: '书库', fontSize: '字体大小', previewText: '书籍内容将在此显示。支持EPUB和PDF格式。' },
     settings: { title: '设置', languageLabel: '语言', themeLabel: '主题', dark: '深色', light: '浅色' },
     footer: '一个工具。$1。为清晰而生。',

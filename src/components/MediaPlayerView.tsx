@@ -15,6 +15,29 @@ interface MediaEntry extends StoredMedia {
 
 type AddMode = null | 'youtube' | 'url';
 
+async function fetchYouTubeTitle(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.title || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchPageTitle(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const match = (data.contents as string)?.match(/<title[^>]*>([^<]+)<\/title>/i);
+    return match ? match[1].trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 function formatTime(secs: number): string {
   if (!isFinite(secs) || secs < 0) return '0:00';
   const m = Math.floor(secs / 60);
@@ -69,6 +92,7 @@ export default function MediaPlayerView() {
   const [addMode, setAddMode] = useState<AddMode>(null);
   const [inputValue, setInputValue] = useState('');
   const [inputError, setInputError] = useState(false);
+  const [fetchingTitle, setFetchingTitle] = useState(false);
 
   const mediaRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null);
   const ytPlayerRef = useRef<YTPlayer | null>(null);
@@ -225,14 +249,21 @@ export default function MediaPlayerView() {
 
   const handleAddUrl = async () => {
     const raw = inputValue.trim();
-    if (!raw) return;
+    if (!raw || fetchingTitle) return;
 
-    if (addMode === 'youtube') {
-      const videoId = extractYouTubeId(raw);
+    const ytId = extractYouTubeId(raw);
+    const effectiveMode = (addMode === 'url' && ytId) ? 'youtube' : addMode;
+
+    if (effectiveMode === 'youtube') {
+      const videoId = ytId ?? extractYouTubeId(raw);
       if (!videoId) { setInputError(true); return; }
+      setFetchingTitle(true);
+      const fetched = await fetchYouTubeTitle(raw);
+      setFetchingTitle(false);
+      const title = fetched || `YouTube: ${videoId}`;
       const id = `yt_${Date.now()}`;
       const item: StoredMedia = {
-        id, title: `YouTube: ${videoId}`, type: 'youtube',
+        id, title, type: 'youtube',
         url: raw,
         thumbnail: `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`,
       };
@@ -245,9 +276,13 @@ export default function MediaPlayerView() {
       }
     } else {
       try { new URL(raw); } catch { setInputError(true); return; }
+      setFetchingTitle(true);
+      const fetched = await fetchPageTitle(raw);
+      setFetchingTitle(false);
+      const fallback = raw.split('/').filter(Boolean).pop()?.split('?')[0] || raw;
+      const title = fetched || fallback;
       const id = `url_${Date.now()}`;
-      const name = raw.split('/').pop()?.split('?')[0] || raw;
-      const item: StoredMedia = { id, title: name, type: 'url', url: raw };
+      const item: StoredMedia = { id, title, type: 'url', url: raw };
       await saveMedia(item);
       const entry: MediaEntry = { ...item };
       setEntries(prev => [...prev, entry]);
@@ -436,13 +471,16 @@ export default function MediaPlayerView() {
                 autoFocus
               />
               {inputError && <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 self-center" />}
-              <button onClick={handleAddUrl}
-                className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              <button onClick={handleAddUrl} disabled={fetchingTitle}
+                className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium transition-all disabled:opacity-60 ${
                   addMode === 'youtube' ? 'bg-red-500/20 text-red-300 hover:bg-red-500/30' : 'bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30'
                 }`}
               >
-                <Plus className="w-3 h-3" />
-                {t.player.add}
+                {fetchingTitle
+                  ? <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                  : <Plus className="w-3 h-3" />
+                }
+                {fetchingTitle ? t.player.loading ?? 'Loading...' : t.player.add}
               </button>
             </div>
             {inputError && (
