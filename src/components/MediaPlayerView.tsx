@@ -35,8 +35,8 @@ interface MediaEntry extends StoredMedia {
 type AddMode = null | 'youtube' | 'url';
 type PlayableMediaType = Extract<MediaSourceType, 'audio' | 'video' | 'youtube'>;
 
-const VIDEO_EXTS = /\.(mp4|webm|ogv|mov|avi|mkv|m4v)(\?|#|$)/i;
-const AUDIO_EXTS = /\.(mp3|wav|ogg|flac|aac|m4a|opus|weba)(\?|#|$)/i;
+const VIDEO_EXTS = /\.(mp4|webm|ogv|mov|avi|mkv|m4v|m3u8|mpd)(\?|#|$)/i;
+const AUDIO_EXTS = /\.(mp3|wav|ogg|flac|aac|m4a|opus|weba|m3u|pls)(\?|#|$)/i;
 
 const GROUP_ORDER: PlayableMediaType[] = ['audio', 'video', 'youtube'];
 const GROUP_LABELS: Record<PlayableMediaType, string> = {
@@ -49,9 +49,69 @@ function isPlayableType(type: MediaSourceType): type is PlayableMediaType {
   return type === 'audio' || type === 'video' || type === 'youtube';
 }
 
-function detectUrlMediaType(url: string): 'audio' | 'video' | null {
+function normalizeUrlInput(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function detectUrlMediaTypeByExt(url: string): 'audio' | 'video' | null {
   if (VIDEO_EXTS.test(url)) return 'video';
   if (AUDIO_EXTS.test(url)) return 'audio';
+  return null;
+}
+
+async function detectUrlMediaType(url: string): Promise<'audio' | 'video' | null> {
+  const byExt = detectUrlMediaTypeByExt(url);
+  if (byExt) return byExt;
+
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    const contentType = res.headers.get('content-type')?.toLowerCase() ?? '';
+    if (contentType.startsWith('audio/')) return 'audio';
+    if (contentType.startsWith('video/')) return 'video';
+  } catch {
+    // Some hosts block HEAD/CORS; we'll fall back to a playable default in caller.
+  }
+
+  return null;
+}
+
+async function findEmbeddedMediaUrl(pageUrl: string): Promise<{ url: string; type: 'audio' | 'video' } | null> {
+  try {
+    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(pageUrl)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const html = (data.contents as string) || '';
+
+    const attrMatches = Array.from(
+      html.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi),
+      m => m[1].trim().replace(/&amp;/gi, '&')
+    );
+
+    const candidates = Array.from(
+      new Set(
+        attrMatches
+          .map(raw => {
+            try {
+              return new URL(raw, pageUrl).href;
+            } catch {
+              return null;
+            }
+          })
+          .filter((v): v is string => Boolean(v))
+      )
+    );
+
+    for (const candidate of candidates) {
+      const type = detectUrlMediaTypeByExt(candidate);
+      if (type) return { url: candidate, type };
+    }
+  } catch {
+    // If page fetch/parsing fails, caller will show invalid URL message.
+  }
+
   return null;
 }
 
@@ -126,8 +186,6 @@ export default function MediaPlayerView() {
   const ytPlayerRef = useRef<YTPlayer | null>(null);
   const ytContainerRef = useRef<HTMLDivElement | null>(null);
   const ytTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioFileRef = useRef<HTMLInputElement | null>(null);
-  const videoFileRef = useRef<HTMLInputElement | null>(null);
 
   const entriesRef = useRef<MediaEntry[]>([]);
   const currentIdRef = useRef<string | null>(null);
@@ -414,11 +472,12 @@ export default function MediaPlayerView() {
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>, type: 'audio' | 'video') => {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
+    const files = Array.from(fileList);
     e.target.value = '';
 
     const newEntries: MediaEntry[] = [];
 
-    for (const file of Array.from(fileList)) {
+    for (const file of files) {
       const id = `${type}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const objectUrl = URL.createObjectURL(file);
       const item: StoredMedia = {
@@ -450,7 +509,7 @@ export default function MediaPlayerView() {
   };
 
   const handleAddUrl = async () => {
-    const raw = inputValue.trim();
+    const raw = normalizeUrlInput(inputValue);
     if (!raw || fetchingTitle) return;
 
     try {
@@ -505,8 +564,18 @@ export default function MediaPlayerView() {
       return;
     }
 
-    const detectedType = detectUrlMediaType(raw);
-    if (!detectedType) {
+    let finalUrl = raw;
+    let finalType = await detectUrlMediaType(raw);
+
+    if (!finalType) {
+      const embedded = await findEmbeddedMediaUrl(raw);
+      if (embedded) {
+        finalUrl = embedded.url;
+        finalType = embedded.type;
+      }
+    }
+
+    if (!finalType) {
       setInputError(true);
       return;
     }
@@ -515,13 +584,13 @@ export default function MediaPlayerView() {
     const fetched = await fetchPageTitle(raw);
     setFetchingTitle(false);
 
-    const fallback = raw.split('/').filter(Boolean).pop()?.split('?')[0] || 'Media';
-    const id = `${detectedType}_${Date.now()}`;
+    const fallback = finalUrl.split('/').filter(Boolean).pop()?.split('?')[0] || 'Media';
+    const id = `${finalType}_${Date.now()}`;
     const item: StoredMedia = {
       id,
       title: fetched || fallback,
-      type: detectedType,
-      url: raw,
+      type: finalType,
+      url: finalUrl,
     };
 
     try {
@@ -675,49 +744,49 @@ export default function MediaPlayerView() {
       </div>
 
       <input
-        ref={audioFileRef}
+        id="audio-upload"
         type="file"
         accept="audio/*"
         multiple
-        className="hidden"
+        className="sr-only"
         onChange={e => handleFileUpload(e, 'audio')}
       />
 
       <input
-        ref={videoFileRef}
+        id="video-upload"
         type="file"
         accept="video/*"
         multiple
-        className="hidden"
+        className="sr-only"
         onChange={e => handleFileUpload(e, 'video')}
       />
 
       <audio ref={audioEl} preload="auto" style={{ display: 'none' }} />
 
       <div className="grid grid-cols-4 gap-2 mb-4">
-        <motion.button
+        <motion.label
+          htmlFor="audio-upload"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => audioFileRef.current?.click()}
           className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all"
         >
           <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center">
             <Music className="w-4 h-4 text-blue-400" />
           </div>
           <span className="text-xs text-gray-400 text-center leading-tight">{t.player.uploadAudio}</span>
-        </motion.button>
+        </motion.label>
 
-        <motion.button
+        <motion.label
+          htmlFor="video-upload"
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
-          onClick={() => videoFileRef.current?.click()}
           className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all"
         >
           <div className="w-9 h-9 rounded-xl bg-pink-500/20 flex items-center justify-center">
             <Video className="w-4 h-4 text-pink-400" />
           </div>
           <span className="text-xs text-gray-400 text-center leading-tight">{t.player.uploadVideo}</span>
-        </motion.button>
+        </motion.label>
 
         <motion.button
           whileHover={{ scale: 1.03 }}
