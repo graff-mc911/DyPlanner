@@ -37,6 +37,8 @@ type PlayableMediaType = Extract<MediaSourceType, 'audio' | 'video' | 'youtube'>
 
 const VIDEO_EXTS = /\.(mp4|webm|ogv|mov|avi|mkv|m4v|m3u8|mpd)(\?|#|$)/i;
 const AUDIO_EXTS = /\.(mp3|wav|ogg|flac|aac|m4a|opus|weba|m3u|pls)(\?|#|$)/i;
+const AUDIO_ACCEPT = '.mp3,.wav,.ogg,.flac,.aac,.m4a,.opus,.weba,.m3u,.pls,audio/*';
+const VIDEO_ACCEPT = '.mp4,.webm,.ogv,.mov,.avi,.mkv,.m4v,.m3u8,.mpd,video/*';
 
 const GROUP_ORDER: PlayableMediaType[] = ['audio', 'video', 'youtube'];
 const GROUP_LABELS: Record<PlayableMediaType, string> = {
@@ -60,6 +62,30 @@ function detectUrlMediaTypeByExt(url: string): 'audio' | 'video' | null {
   if (VIDEO_EXTS.test(url)) return 'video';
   if (AUDIO_EXTS.test(url)) return 'audio';
   return null;
+}
+
+function detectLocalFileType(file: File, fallback: 'audio' | 'video'): 'audio' | 'video' {
+  const mime = file.type.toLowerCase();
+  if (mime.startsWith('audio/')) return 'audio';
+  if (mime.startsWith('video/')) return 'video';
+  return detectUrlMediaTypeByExt(file.name) ?? fallback;
+}
+
+function canPlayLocalFile(file: File, type: 'audio' | 'video'): boolean {
+  if (typeof document === 'undefined') return true;
+  const el = document.createElement(type);
+
+  if (file.type) {
+    const support = el.canPlayType(file.type);
+    if (support === 'probably' || support === 'maybe') return true;
+  }
+
+  return detectUrlMediaTypeByExt(file.name) === type;
+}
+
+function isIOSDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
 async function detectUrlMediaType(url: string): Promise<'audio' | 'video' | null> {
@@ -178,6 +204,7 @@ export default function MediaPlayerView() {
   const [addMode, setAddMode] = useState<AddMode>(null);
   const [inputValue, setInputValue] = useState('');
   const [inputError, setInputError] = useState(false);
+  const [fileError, setFileError] = useState('');
   const [fetchingTitle, setFetchingTitle] = useState(false);
   const [collapsed, setCollapsed] = useState<Partial<Record<PlayableMediaType, boolean>>>({});
 
@@ -196,6 +223,7 @@ export default function MediaPlayerView() {
   entriesRef.current = entries;
   currentIdRef.current = currentId;
   volumeRef.current = volume;
+  const isIOS = isIOSDevice();
 
   const current = entries.find(entry => entry.id === currentId) ?? null;
 
@@ -476,25 +504,43 @@ export default function MediaPlayerView() {
     e.target.value = '';
 
     const newEntries: MediaEntry[] = [];
+    let skipped = 0;
+    const persistBlobs = !isIOS;
 
     for (const file of files) {
-      const id = `${type}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const actualType = detectLocalFileType(file, type);
+      if (!canPlayLocalFile(file, actualType)) {
+        skipped += 1;
+        continue;
+      }
+
+      const id = `${actualType}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const objectUrl = URL.createObjectURL(file);
       const item: StoredMedia = {
         id,
         title: file.name.replace(/\.[^/.]+$/, ''),
-        type,
-        blob: file,
+        type: actualType,
+        ...(persistBlobs ? { blob: file } : {}),
       };
 
-      try {
-        await saveMedia(item);
-      } catch (error) {
-        console.error('Failed to save media to IndexedDB:', error);
+      if (persistBlobs) {
+        try {
+          await saveMedia(item);
+        } catch (error) {
+          console.error('Failed to save media to IndexedDB:', error);
+        }
       }
 
       newEntries.push({ ...item, objectUrl });
     }
+
+    if (skipped > 0) {
+      setFileError(`Не вдалося відтворити ${skipped} файл(и) на цьому пристрої.`);
+    } else {
+      setFileError('');
+    }
+
+    if (newEntries.length === 0) return;
 
     setEntries(prev => [...prev, ...newEntries]);
 
@@ -741,12 +787,20 @@ export default function MediaPlayerView() {
       <div className="mb-5">
         <h1 className="text-3xl font-bold text-white mb-1">{t.player.title}</h1>
         <p className="text-gray-400 text-sm">{t.player.supported}</p>
+        {isIOS && (
+          <p className="text-amber-300/80 text-xs mt-1">
+            iPhone: працюють сумісні формати (MP3/M4A/MP4). iOS не дозволяє веб-додатку читати папку автоматично.
+          </p>
+        )}
+        {fileError && (
+          <p className="text-xs text-amber-300/90 mt-1">{fileError}</p>
+        )}
       </div>
 
       <input
         id="audio-upload"
         type="file"
-        accept="audio/*"
+        accept={AUDIO_ACCEPT}
         multiple
         className="sr-only"
         onChange={e => handleFileUpload(e, 'audio')}
@@ -755,7 +809,7 @@ export default function MediaPlayerView() {
       <input
         id="video-upload"
         type="file"
-        accept="video/*"
+        accept={VIDEO_ACCEPT}
         multiple
         className="sr-only"
         onChange={e => handleFileUpload(e, 'video')}
