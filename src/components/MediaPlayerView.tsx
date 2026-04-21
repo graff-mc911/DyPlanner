@@ -12,13 +12,10 @@ import {
   Upload,
   X,
   ListMusic,
-  Cloud,
+  Plus,
   AlertCircle,
   ChevronDown,
   ChevronRight,
-  Plus,
-  HardDrive,
-  Globe,
   Shuffle,
   Repeat,
   Repeat1,
@@ -39,7 +36,9 @@ const VIDEO_EXTS = /\.(mp4|webm|ogv|mov|avi|mkv|m4v|m3u8|mpd)(\?|#|$)/i;
 const AUDIO_EXTS = /\.(mp3|wav|ogg|flac|aac|m4a|opus|weba|m3u|pls)(\?|#|$)/i;
 const AUDIO_ACCEPT = '.mp3,.wav,.ogg,.flac,.aac,.m4a,.opus,.weba,.m3u,.pls,audio/*';
 const VIDEO_ACCEPT = '.mp4,.webm,.ogv,.mov,.avi,.mkv,.m4v,.m3u8,.mpd,video/*';
-const CLOUD_ACCEPT = `${AUDIO_ACCEPT},${VIDEO_ACCEPT}`;
+const DEVICE_ACCEPT = `${AUDIO_ACCEPT},${VIDEO_ACCEPT}`;
+const EMPTY_HINT = 'No media yet. Add audio or video and start playback.';
+const VOLUME_STORAGE_KEY = 'dyplanner_media_volume';
 
 const GROUP_ORDER: PlayableMediaType[] = ['audio', 'video'];
 const GROUP_LABELS: Record<PlayableMediaType, string> = {
@@ -47,17 +46,8 @@ const GROUP_LABELS: Record<PlayableMediaType, string> = {
   video: 'Video',
 };
 
-const EMPTY_HINT = 'No media yet. Add audio or video and start playback.';
-
 function isPlayableType(type: MediaSourceType): type is PlayableMediaType {
   return type === 'audio' || type === 'video';
-}
-
-function normalizeUrlInput(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return '';
-  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
 }
 
 function detectUrlMediaTypeByExt(url: string): 'audio' | 'video' | null {
@@ -90,195 +80,12 @@ function isIOSDevice(): boolean {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
-function isStandaloneWebApp(): boolean {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
-  const nav = navigator as Navigator & { standalone?: boolean };
-  return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
-}
-
-function normalizeCloudShareUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-
-    if (host === 'drive.google.com') {
-      const queryId = parsed.searchParams.get('id');
-      if (queryId) {
-        return `https://drive.google.com/uc?export=download&id=${queryId}`;
-      }
-
-      const parts = parsed.pathname.split('/').filter(Boolean);
-      if (parts[0] === 'file' && parts[1] === 'd' && parts[2]) {
-        return `https://drive.google.com/uc?export=download&id=${parts[2]}`;
-      }
-    }
-
-    if (host.includes('dropbox.com')) {
-      parsed.searchParams.set('dl', '1');
-      return parsed.toString();
-    }
-
-    if (host.includes('onedrive.live.com') || host.includes('1drv.ms')) {
-      parsed.searchParams.set('download', '1');
-      return parsed.toString();
-    }
-  } catch {
-    return url;
-  }
-
-  return url;
-}
-
-async function detectUrlMediaType(url: string): Promise<'audio' | 'video' | null> {
-  const byExt = detectUrlMediaTypeByExt(url);
-  if (byExt) return byExt;
-
-  try {
-    const res = await fetch(url, { method: 'HEAD' });
-    const contentType = res.headers.get('content-type')?.toLowerCase() ?? '';
-    if (contentType.startsWith('audio/')) return 'audio';
-    if (contentType.startsWith('video/')) return 'video';
-  } catch {
-    // Some servers block HEAD or cross-origin probing.
-  }
-
-  return null;
-}
-
-async function findEmbeddedMediaUrl(pageUrl: string): Promise<{ url: string; type: 'audio' | 'video' } | null> {
-  try {
-    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(pageUrl)}`);
-    if (!response.ok) return null;
-    const payload = await response.json();
-    const html = String(payload.contents ?? '');
-
-    const rawAttrs = Array.from(
-      html.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi),
-      m => m[1].trim().replace(/&amp;/gi, '&')
-    );
-
-    const candidates = Array.from(
-      new Set(
-        rawAttrs
-          .map(raw => {
-            try {
-              return new URL(raw, pageUrl).href;
-            } catch {
-              return null;
-            }
-          })
-          .filter((url): url is string => Boolean(url))
-      )
-    );
-
-    for (const candidate of candidates) {
-      const type = detectUrlMediaTypeByExt(candidate);
-      if (type) return { url: candidate, type };
-    }
-  } catch {
-    // Best effort only.
-  }
-
-  return null;
-}
-
-function buildAllOriginsRawUrl(url: string): string {
-  return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-}
-
-function probePlayableUrl(url: string, type: 'audio' | 'video', timeoutMs = 10000): Promise<boolean> {
-  if (typeof document === 'undefined') return Promise.resolve(true);
-
-  return new Promise(resolve => {
-    const el = document.createElement(type);
-    let settled = false;
-
-    const finish = (ok: boolean) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      el.oncanplay = null;
-      el.onloadedmetadata = null;
-      el.onerror = null;
-      el.removeAttribute('src');
-      el.load();
-      resolve(ok);
-    };
-
-    const timer = window.setTimeout(() => finish(false), timeoutMs);
-
-    el.preload = 'metadata';
-    el.oncanplay = () => finish(true);
-    el.onloadedmetadata = () => finish(true);
-    el.onerror = () => finish(false);
-
-    try {
-      el.src = url;
-      el.load();
-    } catch {
-      finish(false);
-    }
-  });
-}
-
-async function resolvePlayableWebSource(
-  inputUrl: string,
-  preferredType: PlayableMediaType
-): Promise<{ url: string; type: PlayableMediaType; note?: string } | null> {
-  const candidates: Array<{ url: string; hintType?: PlayableMediaType; note?: string }> = [];
-  const seen = new Set<string>();
-
-  const pushCandidate = (url: string, hintType?: PlayableMediaType, note?: string) => {
-    if (!url || seen.has(url)) return;
-    seen.add(url);
-    candidates.push({ url, hintType, note });
-  };
-
-  const normalized = normalizeCloudShareUrl(inputUrl);
-  pushCandidate(normalized, detectUrlMediaTypeByExt(normalized) ?? undefined);
-  pushCandidate(
-    buildAllOriginsRawUrl(normalized),
-    detectUrlMediaTypeByExt(normalized) ?? undefined,
-    'The original host blocks playback, so compatibility proxy is used.'
-  );
-
-  const embedded = await findEmbeddedMediaUrl(inputUrl);
-  if (embedded) {
-    const embeddedUrl = normalizeCloudShareUrl(embedded.url);
-    pushCandidate(embeddedUrl, embedded.type);
-    pushCandidate(
-      buildAllOriginsRawUrl(embeddedUrl),
-      embedded.type,
-      'Embedded media is opened through compatibility proxy.'
-    );
-  }
-
-  for (const candidate of candidates) {
-    const detected = candidate.hintType ?? (await detectUrlMediaType(candidate.url));
-    const probeOrder: PlayableMediaType[] = detected
-      ? [detected, detected === 'audio' ? 'video' : 'audio']
-      : [preferredType, preferredType === 'audio' ? 'video' : 'audio'];
-
-    for (const type of probeOrder) {
-      const ok = await probePlayableUrl(candidate.url, type);
-      if (ok) {
-        return { url: candidate.url, type, note: candidate.note };
-      }
-    }
-  }
-
-  return null;
-}
-
-function inferTitleFromUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const leaf = parsed.pathname.split('/').filter(Boolean).pop();
-    if (!leaf) return parsed.hostname;
-    return decodeURIComponent(leaf).replace(/\.[^/.]+$/, '') || parsed.hostname;
-  } catch {
-    return 'Web media';
-  }
+function getInitialVolume(): number {
+  if (typeof window === 'undefined') return 80;
+  const raw = window.localStorage.getItem(VOLUME_STORAGE_KEY);
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return 80;
+  return Math.min(100, Math.max(0, parsed));
 }
 
 function formatTime(secs: number): string {
@@ -296,54 +103,40 @@ export default function MediaPlayerView() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(80);
+  const [volume, setVolume] = useState<number>(() => getInitialVolume());
   const [loading, setLoading] = useState(true);
   const [fileError, setFileError] = useState('');
   const [collapsed, setCollapsed] = useState<Partial<Record<PlayableMediaType, boolean>>>({});
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [urlValue, setUrlValue] = useState('');
-  const [urlType, setUrlType] = useState<PlayableMediaType>('audio');
-  const [urlLoading, setUrlLoading] = useState(false);
-  const [urlError, setUrlError] = useState('');
-  const [urlNote, setUrlNote] = useState('');
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('all');
 
-  const deviceInputRef = useRef<HTMLInputElement | null>(null);
-  const cloudInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const audioEl = useRef<HTMLAudioElement | null>(null);
   const videoEl = useRef<HTMLVideoElement | null>(null);
   const entriesRef = useRef<MediaEntry[]>([]);
   const currentIdRef = useRef<string | null>(null);
-  const volumeRef = useRef(80);
-  const shuffleRef = useRef(false);
-  const repeatModeRef = useRef<RepeatMode>('all');
+  const volumeRef = useRef<number>(volume);
+  const shuffleRef = useRef<boolean>(shuffleEnabled);
+  const repeatModeRef = useRef<RepeatMode>(repeatMode);
 
   const isIOS = isIOSDevice();
-  const isStandalone = isStandaloneWebApp();
-  const cloudAccept = isIOS && isStandalone ? undefined : CLOUD_ACCEPT;
 
   entriesRef.current = entries;
   currentIdRef.current = currentId;
-  volumeRef.current = volume;
   shuffleRef.current = shuffleEnabled;
   repeatModeRef.current = repeatMode;
 
   const current = entries.find(entry => entry.id === currentId) ?? null;
 
-  const reportCurrentPlaybackError = useCallback(() => {
-    const cid = currentIdRef.current;
-    if (!cid) return;
-
-    const currentEntry = entriesRef.current.find(entry => entry.id === cid);
-    if (!currentEntry) return;
-
-    if (currentEntry.url && !currentEntry.objectUrl) {
-      setFileError('Web link is blocked by source site. Use a direct media file URL (.mp3/.mp4/.webm).');
-    } else {
-      setFileError('This file cannot be played on this device.');
+  useEffect(() => {
+    volumeRef.current = volume;
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(VOLUME_STORAGE_KEY, String(volume));
     }
+  }, [volume]);
+
+  const reportCurrentPlaybackError = useCallback(() => {
+    setFileError('This file cannot be played on this device.');
   }, []);
 
   const stopNativeMedia = useCallback(() => {
@@ -367,6 +160,7 @@ export default function MediaPlayerView() {
       setIsPlaying(false);
       setCurrentTime(0);
       setDuration(0);
+      setFileError('');
     },
     [stopNativeMedia]
   );
@@ -405,6 +199,7 @@ export default function MediaPlayerView() {
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
+    setFileError('');
   }, []);
 
   const handleTrackEnded = useCallback(
@@ -612,84 +407,6 @@ export default function MediaPlayerView() {
     [addFilesToPlaylist]
   );
 
-  const handleCloudUpload = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      const fileList = e.target.files;
-      if (!fileList || fileList.length === 0) return;
-      const files = Array.from(fileList);
-      e.target.value = '';
-      void addFilesToPlaylist(files, 'mixed');
-    },
-    [addFilesToPlaylist]
-  );
-
-  const handleAddUrl = useCallback(async () => {
-    if (urlLoading) return;
-
-    const normalized = normalizeUrlInput(urlValue);
-    if (!normalized) {
-      setUrlError('Paste a valid URL first.');
-      return;
-    }
-
-    let parsed: URL;
-    try {
-      parsed = new URL(normalized);
-    } catch {
-      setUrlError('Invalid URL format.');
-      return;
-    }
-
-    setUrlError('');
-    setUrlNote('');
-    setUrlLoading(true);
-
-    let resolved: { url: string; type: PlayableMediaType; note?: string } | null = null;
-    try {
-      resolved = await resolvePlayableWebSource(parsed.toString(), urlType);
-    } catch {
-      setUrlLoading(false);
-      setUrlError('Could not open this link right now. Try again or use another URL.');
-      return;
-    }
-
-    if (!resolved) {
-      setUrlLoading(false);
-      setUrlError('This link is not directly playable. Use a direct media file URL (.mp3/.mp4/.webm).');
-      return;
-    }
-
-    const finalUrl = resolved.url;
-    const finalType = resolved.type;
-
-    const id = `${finalType}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const item: StoredMedia = {
-      id,
-      title: inferTitleFromUrl(finalUrl),
-      type: finalType,
-      url: finalUrl,
-    };
-
-    try {
-      await saveMedia(item);
-    } catch (error) {
-      console.error('Failed to save URL item:', error);
-    }
-
-    setEntries(prev => [...prev, item]);
-    setCurrentId(id);
-    currentIdRef.current = id;
-    setCurrentTime(0);
-    setDuration(0);
-    setIsPlaying(false);
-
-    setUrlLoading(false);
-    setIsAddOpen(false);
-    setShowUrlInput(false);
-    setUrlValue('');
-    setFileError(resolved.note ?? '');
-  }, [urlLoading, urlValue, urlType]);
-
   const togglePlay = useCallback(() => {
     if (!current) return;
 
@@ -821,34 +538,13 @@ export default function MediaPlayerView() {
           <motion.button
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            onClick={() => setIsAddOpen(prev => !prev)}
+            onClick={() => fileInputRef.current?.click()}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-500/25"
           >
             <Plus className="w-4 h-4" />
-            Add media
+            Add file
           </motion.button>
         </div>
-
-        {isIOS && (
-          <p className="text-amber-300/80 text-xs mt-2">
-            iPhone/iPad: for cloud access, ensure provider is enabled in Files app.
-          </p>
-        )}
-
-        {isIOS && isStandalone && (
-          <div className="mt-2 p-2 rounded-lg border border-amber-400/20 bg-amber-500/5">
-            <p className="text-amber-200/90 text-xs">
-              Home Screen mode on iOS may hide some cloud providers. If Google Drive is missing, open this page in
-              Safari or use iCloud Drive / On My iPhone.
-            </p>
-            <button
-              onClick={() => window.open(window.location.href, '_blank', 'noopener,noreferrer')}
-              className="mt-1.5 text-[11px] px-2 py-1 rounded-md bg-amber-400/15 text-amber-200 hover:bg-amber-400/25 transition-colors"
-            >
-              Open in Safari
-            </button>
-          </div>
-        )}
 
         {fileError && (
           <p className="text-xs text-amber-300/90 mt-2 flex items-center gap-1">
@@ -859,147 +555,15 @@ export default function MediaPlayerView() {
       </div>
 
       <input
-        ref={deviceInputRef}
+        ref={fileInputRef}
         type="file"
-        accept={CLOUD_ACCEPT}
+        accept={DEVICE_ACCEPT}
         multiple
         className="sr-only"
         onChange={handleLocalUpload}
       />
 
-      <input
-        ref={cloudInputRef}
-        type="file"
-        accept={cloudAccept}
-        multiple
-        className="sr-only"
-        onChange={handleCloudUpload}
-      />
-
       <audio ref={audioEl} preload="auto" style={{ display: 'none' }} />
-
-      <AnimatePresence>
-        {isAddOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: 'auto' }}
-            exit={{ opacity: 0, y: -8, height: 0 }}
-            className="overflow-hidden mb-4"
-          >
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button
-                  onClick={() => {
-                    setIsAddOpen(false);
-                    setShowUrlInput(false);
-                    cloudInputRef.current?.blur();
-                    deviceInputRef.current?.click();
-                  }}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-colors"
-                >
-                  <HardDrive className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm text-gray-200">From device</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsAddOpen(false);
-                    setShowUrlInput(false);
-                    cloudInputRef.current?.click();
-                  }}
-                  className="flex items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-colors"
-                >
-                  <Cloud className="w-4 h-4 text-cyan-400" />
-                  <span className="text-sm text-gray-200">From cloud</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setShowUrlInput(prev => !prev);
-                    setUrlError('');
-                    setUrlNote('');
-                  }}
-                  className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-colors ${
-                    showUrlInput
-                      ? 'bg-emerald-500/15 border-emerald-500/40'
-                      : 'bg-white/5 hover:bg-white/10 border-white/10'
-                  }`}
-                >
-                  <Globe className="w-4 h-4 text-emerald-400" />
-                  <span className="text-sm text-gray-200">From internet URL</span>
-                </button>
-              </div>
-
-              <AnimatePresence>
-                {showUrlInput && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden mt-3"
-                  >
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <button
-                          onClick={() => setUrlType('audio')}
-                          className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
-                            urlType === 'audio'
-                              ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
-                              : 'bg-white/5 border-white/10 text-gray-400'
-                          }`}
-                        >
-                          Audio
-                        </button>
-                        <button
-                          onClick={() => setUrlType('video')}
-                          className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
-                            urlType === 'video'
-                              ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
-                              : 'bg-white/5 border-white/10 text-gray-400'
-                          }`}
-                        >
-                          Video
-                        </button>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={urlValue}
-                          onChange={e => {
-                            setUrlValue(e.target.value);
-                            setUrlError('');
-                            setUrlNote('');
-                          }}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') {
-                              void handleAddUrl();
-                            }
-                          }}
-                          placeholder="Paste direct file URL or page URL"
-                          className="flex-1 bg-transparent text-white text-sm placeholder-gray-500 outline-none border border-white/10 rounded-lg px-3 py-2"
-                        />
-                        <button
-                          onClick={() => {
-                            void handleAddUrl();
-                          }}
-                          disabled={urlLoading}
-                          className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-60"
-                        >
-                          {urlLoading ? 'Adding...' : 'Add'}
-                        </button>
-                      </div>
-
-                      {urlError && <p className="text-xs text-red-300 mt-2">{urlError}</p>}
-                      {urlNote && <p className="text-xs text-emerald-200/90 mt-2">{urlNote}</p>}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         {current && (
@@ -1013,14 +577,8 @@ export default function MediaPlayerView() {
           >
             <div className="flex items-center gap-2 mb-1">
               <p className="text-xs text-gray-500 uppercase tracking-wider">{t.player.nowPlaying}</p>
-              <span
-                className={`px-1.5 py-0.5 rounded-md text-[10px] border ${
-                  current.url && !current.objectUrl
-                    ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10'
-                    : 'text-blue-300 border-blue-500/40 bg-blue-500/10'
-                }`}
-              >
-                {current.url && !current.objectUrl ? 'WEB' : 'FILE'}
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] border text-blue-300 border-blue-500/40 bg-blue-500/10">
+                FILE
               </span>
             </div>
             <p className="text-white font-semibold truncate mb-3">{current.title}</p>
@@ -1041,7 +599,11 @@ export default function MediaPlayerView() {
                     key={i}
                     className={`w-1 rounded-full ${isPlaying ? 'bg-cyan-400/80' : 'bg-white/10'}`}
                     animate={isPlaying ? { height: ['20%', `${30 + Math.random() * 70}%`, '20%'] } : { height: '20%' }}
-                    transition={{ duration: 0.4 + Math.random() * 0.4, repeat: isPlaying ? Infinity : 0, delay: i * 0.03 }}
+                    transition={{
+                      duration: 0.4 + Math.random() * 0.4,
+                      repeat: isPlaying ? Infinity : 0,
+                      delay: i * 0.03,
+                    }}
                   />
                 ))}
               </div>
@@ -1215,9 +777,7 @@ export default function MediaPlayerView() {
                             >
                               {entry.title}
                             </span>
-                            <span className="block text-[10px] text-gray-500">
-                              {entry.url && !entry.objectUrl ? 'Web link' : 'Local file'}
-                            </span>
+                            <span className="block text-[10px] text-gray-500">Local file</span>
                           </div>
 
                           <button
