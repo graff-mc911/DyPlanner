@@ -16,6 +16,12 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
+  Plus,
+  HardDrive,
+  Globe,
+  Shuffle,
+  Repeat,
+  Repeat1,
 } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { saveMedia, loadAllMedia, deleteMedia } from '../utils/mediaDB';
@@ -27,6 +33,7 @@ interface MediaEntry extends StoredMedia {
 
 type PlayableMediaType = Extract<MediaSourceType, 'audio' | 'video'>;
 type UploadKind = 'audio' | 'video' | 'mixed';
+type RepeatMode = 'off' | 'all' | 'one';
 
 const VIDEO_EXTS = /\.(mp4|webm|ogv|mov|avi|mkv|m4v|m3u8|mpd)(\?|#|$)/i;
 const AUDIO_EXTS = /\.(mp3|wav|ogg|flac|aac|m4a|opus|weba|m3u|pls)(\?|#|$)/i;
@@ -40,13 +47,21 @@ const GROUP_LABELS: Record<PlayableMediaType, string> = {
   video: 'Video',
 };
 
-const SUPPORTED_HINT = 'MP3, WAV, OGG, MP4, WEBM - Google Drive / iCloud / Dropbox / OneDrive';
+const SUPPORTED_HINT =
+  'MP3, WAV, OGG, AAC, M4A, MP4, WEBM, MOV, MKV - device, cloud, or direct web link';
 const CLOUD_HINT =
-  'Cloud files: tap "Cloud" and choose media from Google Drive, iCloud, Dropbox, OneDrive, or local storage.';
-const EMPTY_HINT = 'No media yet. Add audio or video from your device or cloud.';
+  'Cloud source opens iOS/Android/Desktop file picker: iCloud Drive, Google Drive, Dropbox, OneDrive.';
+const EMPTY_HINT = 'No media yet. Add audio or video and start playback.';
 
 function isPlayableType(type: MediaSourceType): type is PlayableMediaType {
   return type === 'audio' || type === 'video';
+}
+
+function normalizeUrlInput(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
 }
 
 function detectUrlMediaTypeByExt(url: string): 'audio' | 'video' | null {
@@ -55,18 +70,11 @@ function detectUrlMediaTypeByExt(url: string): 'audio' | 'video' | null {
   return null;
 }
 
-function detectLocalFileType(
-  file: File,
-  fallback?: 'audio' | 'video'
-): 'audio' | 'video' | null {
+function detectLocalFileType(file: File, fallback?: 'audio' | 'video'): 'audio' | 'video' | null {
   const mime = file.type.toLowerCase();
   if (mime.startsWith('audio/')) return 'audio';
   if (mime.startsWith('video/')) return 'video';
-
-  const byExt = detectUrlMediaTypeByExt(file.name);
-  if (byExt) return byExt;
-
-  return fallback ?? null;
+  return detectUrlMediaTypeByExt(file.name) ?? fallback ?? null;
 }
 
 function canPlayLocalFile(file: File, type: 'audio' | 'video'): boolean {
@@ -84,6 +92,109 @@ function canPlayLocalFile(file: File, type: 'audio' | 'video'): boolean {
 function isIOSDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isStandaloneWebApp(): boolean {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+  const nav = navigator as Navigator & { standalone?: boolean };
+  return window.matchMedia('(display-mode: standalone)').matches || nav.standalone === true;
+}
+
+function normalizeCloudShareUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+
+    if (host === 'drive.google.com') {
+      const queryId = parsed.searchParams.get('id');
+      if (queryId) {
+        return `https://drive.google.com/uc?export=download&id=${queryId}`;
+      }
+
+      const parts = parsed.pathname.split('/').filter(Boolean);
+      if (parts[0] === 'file' && parts[1] === 'd' && parts[2]) {
+        return `https://drive.google.com/uc?export=download&id=${parts[2]}`;
+      }
+    }
+
+    if (host.includes('dropbox.com')) {
+      parsed.searchParams.set('dl', '1');
+      return parsed.toString();
+    }
+
+    if (host.includes('onedrive.live.com') || host.includes('1drv.ms')) {
+      parsed.searchParams.set('download', '1');
+      return parsed.toString();
+    }
+  } catch {
+    return url;
+  }
+
+  return url;
+}
+
+async function detectUrlMediaType(url: string): Promise<'audio' | 'video' | null> {
+  const byExt = detectUrlMediaTypeByExt(url);
+  if (byExt) return byExt;
+
+  try {
+    const res = await fetch(url, { method: 'HEAD' });
+    const contentType = res.headers.get('content-type')?.toLowerCase() ?? '';
+    if (contentType.startsWith('audio/')) return 'audio';
+    if (contentType.startsWith('video/')) return 'video';
+  } catch {
+    // Some servers block HEAD or cross-origin probing.
+  }
+
+  return null;
+}
+
+async function findEmbeddedMediaUrl(pageUrl: string): Promise<{ url: string; type: 'audio' | 'video' } | null> {
+  try {
+    const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(pageUrl)}`);
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const html = String(payload.contents ?? '');
+
+    const rawAttrs = Array.from(
+      html.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi),
+      m => m[1].trim().replace(/&amp;/gi, '&')
+    );
+
+    const candidates = Array.from(
+      new Set(
+        rawAttrs
+          .map(raw => {
+            try {
+              return new URL(raw, pageUrl).href;
+            } catch {
+              return null;
+            }
+          })
+          .filter((url): url is string => Boolean(url))
+      )
+    );
+
+    for (const candidate of candidates) {
+      const type = detectUrlMediaTypeByExt(candidate);
+      if (type) return { url: candidate, type };
+    }
+  } catch {
+    // Best effort only.
+  }
+
+  return null;
+}
+
+function inferTitleFromUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const leaf = parsed.pathname.split('/').filter(Boolean).pop();
+    if (!leaf) return parsed.hostname;
+    return decodeURIComponent(leaf).replace(/\.[^/.]+$/, '') || parsed.hostname;
+  } catch {
+    return 'Web media';
+  }
 }
 
 function formatTime(secs: number): string {
@@ -105,17 +216,35 @@ export default function MediaPlayerView() {
   const [loading, setLoading] = useState(true);
   const [fileError, setFileError] = useState('');
   const [collapsed, setCollapsed] = useState<Partial<Record<PlayableMediaType, boolean>>>({});
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlValue, setUrlValue] = useState('');
+  const [urlType, setUrlType] = useState<PlayableMediaType>('audio');
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [urlError, setUrlError] = useState('');
+  const [urlNote, setUrlNote] = useState('');
+  const [shuffleEnabled, setShuffleEnabled] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('all');
 
+  const deviceInputRef = useRef<HTMLInputElement | null>(null);
+  const cloudInputRef = useRef<HTMLInputElement | null>(null);
   const audioEl = useRef<HTMLAudioElement | null>(null);
   const videoEl = useRef<HTMLVideoElement | null>(null);
   const entriesRef = useRef<MediaEntry[]>([]);
   const currentIdRef = useRef<string | null>(null);
   const volumeRef = useRef(80);
+  const shuffleRef = useRef(false);
+  const repeatModeRef = useRef<RepeatMode>('all');
+
   const isIOS = isIOSDevice();
+  const isStandalone = isStandaloneWebApp();
+  const cloudAccept = isIOS && isStandalone ? undefined : CLOUD_ACCEPT;
 
   entriesRef.current = entries;
   currentIdRef.current = currentId;
   volumeRef.current = volume;
+  shuffleRef.current = shuffleEnabled;
+  repeatModeRef.current = repeatMode;
 
   const current = entries.find(entry => entry.id === currentId) ?? null;
 
@@ -132,25 +261,70 @@ export default function MediaPlayerView() {
     }
   }, []);
 
+  const selectTrack = useCallback(
+    (id: string) => {
+      stopNativeMedia();
+      setCurrentId(id);
+      currentIdRef.current = id;
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+    },
+    [stopNativeMedia]
+  );
+
   const advanceToNext = useCallback(() => {
     const list = entriesRef.current;
     const cid = currentIdRef.current;
-    if (!cid || list.length === 0) return;
-
-    const idx = list.findIndex(item => item.id === cid);
-    if (idx < 0 || idx >= list.length - 1) {
+    if (!cid || list.length === 0) {
       setIsPlaying(false);
       setCurrentTime(0);
       return;
     }
 
-    const next = list[idx + 1];
+    const idx = list.findIndex(item => item.id === cid);
+    if (idx < 0) return;
+
+    let nextIndex = idx + 1;
+
+    if (shuffleRef.current && list.length > 1) {
+      do {
+        nextIndex = Math.floor(Math.random() * list.length);
+      } while (nextIndex === idx);
+    } else if (nextIndex >= list.length) {
+      if (repeatModeRef.current === 'all') {
+        nextIndex = 0;
+      } else {
+        setIsPlaying(false);
+        setCurrentTime(0);
+        return;
+      }
+    }
+
+    const next = list[nextIndex];
     setCurrentId(next.id);
     currentIdRef.current = next.id;
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
   }, []);
+
+  const handleTrackEnded = useCallback(
+    (el: HTMLAudioElement | HTMLVideoElement | null) => {
+      if (!el) return;
+
+      if (repeatModeRef.current === 'one') {
+        el.currentTime = 0;
+        el.play().catch(() => {});
+        return;
+      }
+
+      setIsPlaying(false);
+      setCurrentTime(0);
+      advanceToNext();
+    },
+    [advanceToNext]
+  );
 
   useEffect(() => {
     loadAllMedia()
@@ -163,6 +337,10 @@ export default function MediaPlayerView() {
           }));
 
         setEntries(loaded);
+        if (loaded.length > 0) {
+          setCurrentId(loaded[0].id);
+          currentIdRef.current = loaded[0].id;
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -186,11 +364,7 @@ export default function MediaPlayerView() {
     };
     el.onplay = () => setIsPlaying(true);
     el.onpause = () => setIsPlaying(false);
-    el.onended = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-      advanceToNext();
-    };
+    el.onended = () => handleTrackEnded(el);
     el.onerror = () => setIsPlaying(false);
 
     return () => {
@@ -201,7 +375,7 @@ export default function MediaPlayerView() {
       el.onended = null;
       el.onerror = null;
     };
-  }, [advanceToNext]);
+  }, [handleTrackEnded]);
 
   const setVideoRef = useCallback(
     (el: HTMLVideoElement | null) => {
@@ -215,14 +389,10 @@ export default function MediaPlayerView() {
       };
       el.onplay = () => setIsPlaying(true);
       el.onpause = () => setIsPlaying(false);
-      el.onended = () => {
-        setIsPlaying(false);
-        setCurrentTime(0);
-        advanceToNext();
-      };
+      el.onended = () => handleTrackEnded(el);
       el.onerror = () => setIsPlaying(false);
     },
-    [advanceToNext]
+    [handleTrackEnded]
   );
 
   useEffect(() => {
@@ -327,13 +497,13 @@ export default function MediaPlayerView() {
     [isIOS]
   );
 
-  const handleFileUpload = useCallback(
-    (e: ChangeEvent<HTMLInputElement>, kind: 'audio' | 'video') => {
+  const handleLocalUpload = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
       const fileList = e.target.files;
       if (!fileList || fileList.length === 0) return;
       const files = Array.from(fileList);
       e.target.value = '';
-      void addFilesToPlaylist(files, kind);
+      void addFilesToPlaylist(files, 'mixed');
     },
     [addFilesToPlaylist]
   );
@@ -349,17 +519,68 @@ export default function MediaPlayerView() {
     [addFilesToPlaylist]
   );
 
-  const selectTrack = useCallback(
-    (id: string) => {
-      stopNativeMedia();
+  const handleAddUrl = useCallback(async () => {
+    if (urlLoading) return;
+
+    const normalized = normalizeUrlInput(urlValue);
+    if (!normalized) {
+      setUrlError('Paste a valid URL first.');
+      return;
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(normalized);
+    } catch {
+      setUrlError('Invalid URL format.');
+      return;
+    }
+
+    setUrlError('');
+    setUrlNote('');
+    setUrlLoading(true);
+
+    let finalUrl = normalizeCloudShareUrl(parsed.toString());
+    let finalType = await detectUrlMediaType(finalUrl);
+
+    if (!finalType) {
+      const embedded = await findEmbeddedMediaUrl(parsed.toString());
+      if (embedded) {
+        finalUrl = normalizeCloudShareUrl(embedded.url);
+        finalType = embedded.type;
+      }
+    }
+
+    if (!finalType) {
+      finalType = urlType;
+      setUrlNote('Link added as selected type. If it does not play, use a direct media file URL.');
+    }
+
+    const id = `${finalType}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const item: StoredMedia = {
+      id,
+      title: inferTitleFromUrl(finalUrl),
+      type: finalType,
+      url: finalUrl,
+    };
+
+    try {
+      await saveMedia(item);
+    } catch (error) {
+      console.error('Failed to save URL item:', error);
+    }
+
+    setEntries(prev => [...prev, item]);
+    if (!currentIdRef.current) {
       setCurrentId(id);
       currentIdRef.current = id;
-      setIsPlaying(false);
-      setCurrentTime(0);
-      setDuration(0);
-    },
-    [stopNativeMedia]
-  );
+    }
+
+    setUrlLoading(false);
+    setIsAddOpen(false);
+    setShowUrlInput(false);
+    setUrlValue('');
+  }, [urlLoading, urlValue, urlType]);
 
   const togglePlay = useCallback(() => {
     if (!current) return;
@@ -401,8 +622,19 @@ export default function MediaPlayerView() {
       if (!cid || list.length === 0) return;
 
       const idx = list.findIndex(entry => entry.id === cid);
-      const next = list[(idx + dir + list.length) % list.length];
-      selectTrack(next.id);
+      if (idx < 0) return;
+
+      let nextIndex = idx + dir;
+      if (shuffleRef.current && list.length > 1 && dir === 1) {
+        do {
+          nextIndex = Math.floor(Math.random() * list.length);
+        } while (nextIndex === idx);
+      } else {
+        if (nextIndex < 0) nextIndex = list.length - 1;
+        if (nextIndex >= list.length) nextIndex = 0;
+      }
+
+      selectTrack(list[nextIndex].id);
     },
     [selectTrack]
   );
@@ -448,6 +680,14 @@ export default function MediaPlayerView() {
     if (videoEl.current) videoEl.current.volume = val / 100;
   };
 
+  const cycleRepeatMode = () => {
+    setRepeatMode(prev => {
+      if (prev === 'off') return 'all';
+      if (prev === 'all') return 'one';
+      return 'off';
+    });
+  };
+
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   const groups = GROUP_ORDER
@@ -465,16 +705,47 @@ export default function MediaPlayerView() {
       className="flex flex-col h-full p-6 pb-28"
     >
       <div className="mb-5">
-        <h1 className="text-3xl font-bold text-white mb-1">{t.player.title}</h1>
-        <p className="text-gray-400 text-sm">{SUPPORTED_HINT}</p>
-        <p className="text-gray-500 text-xs mt-1">{CLOUD_HINT}</p>
+        <div className="flex items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold text-white mb-1">{t.player.title}</h1>
+            <p className="text-gray-400 text-sm">{SUPPORTED_HINT}</p>
+            <p className="text-gray-500 text-xs mt-1">{CLOUD_HINT}</p>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setIsAddOpen(prev => !prev)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white text-sm font-semibold shadow-lg shadow-cyan-500/25"
+          >
+            <Plus className="w-4 h-4" />
+            Add media
+          </motion.button>
+        </div>
+
         {isIOS && (
-          <p className="text-amber-300/80 text-xs mt-1">
-            iPhone/iPad: choose files in the system picker. Keep cloud provider app installed and enabled in Files.
+          <p className="text-amber-300/80 text-xs mt-2">
+            iPhone/iPad: for cloud access, ensure provider is enabled in Files app.
           </p>
         )}
+
+        {isIOS && isStandalone && (
+          <div className="mt-2 p-2 rounded-lg border border-amber-400/20 bg-amber-500/5">
+            <p className="text-amber-200/90 text-xs">
+              Home Screen mode on iOS may hide some cloud providers. If Google Drive is missing, open this page in
+              Safari or use iCloud Drive / On My iPhone.
+            </p>
+            <button
+              onClick={() => window.open(window.location.href, '_blank', 'noopener,noreferrer')}
+              className="mt-1.5 text-[11px] px-2 py-1 rounded-md bg-amber-400/15 text-amber-200 hover:bg-amber-400/25 transition-colors"
+            >
+              Open in Safari
+            </button>
+          </div>
+        )}
+
         {fileError && (
-          <p className="text-xs text-amber-300/90 mt-1 flex items-center gap-1">
+          <p className="text-xs text-amber-300/90 mt-2 flex items-center gap-1">
             <AlertCircle className="w-3.5 h-3.5" />
             {fileError}
           </p>
@@ -482,27 +753,18 @@ export default function MediaPlayerView() {
       </div>
 
       <input
-        id="audio-upload"
-        type="file"
-        accept={AUDIO_ACCEPT}
-        multiple
-        className="sr-only"
-        onChange={e => handleFileUpload(e, 'audio')}
-      />
-
-      <input
-        id="video-upload"
-        type="file"
-        accept={VIDEO_ACCEPT}
-        multiple
-        className="sr-only"
-        onChange={e => handleFileUpload(e, 'video')}
-      />
-
-      <input
-        id="cloud-upload"
+        ref={deviceInputRef}
         type="file"
         accept={CLOUD_ACCEPT}
+        multiple
+        className="sr-only"
+        onChange={handleLocalUpload}
+      />
+
+      <input
+        ref={cloudInputRef}
+        type="file"
+        accept={cloudAccept}
         multiple
         className="sr-only"
         onChange={handleCloudUpload}
@@ -510,55 +772,151 @@ export default function MediaPlayerView() {
 
       <audio ref={audioEl} preload="auto" style={{ display: 'none' }} />
 
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <motion.label
-          htmlFor="audio-upload"
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all"
-        >
-          <div className="w-9 h-9 rounded-xl bg-blue-500/20 flex items-center justify-center">
-            <Music className="w-4 h-4 text-blue-400" />
-          </div>
-          <span className="text-xs text-gray-400 text-center leading-tight">{t.player.uploadAudio}</span>
-        </motion.label>
+      <AnimatePresence>
+        {isAddOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -8, height: 0 }}
+            className="overflow-hidden mb-4"
+          >
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  onClick={() => {
+                    setIsAddOpen(false);
+                    setShowUrlInput(false);
+                    cloudInputRef.current?.blur();
+                    deviceInputRef.current?.click();
+                  }}
+                  className="flex items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-colors"
+                >
+                  <HardDrive className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm text-gray-200">From device</span>
+                </button>
 
-        <motion.label
-          htmlFor="video-upload"
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all"
-        >
-          <div className="w-9 h-9 rounded-xl bg-pink-500/20 flex items-center justify-center">
-            <Video className="w-4 h-4 text-pink-400" />
-          </div>
-          <span className="text-xs text-gray-400 text-center leading-tight">{t.player.uploadVideo}</span>
-        </motion.label>
+                <button
+                  onClick={() => {
+                    setIsAddOpen(false);
+                    setShowUrlInput(false);
+                    cloudInputRef.current?.click();
+                  }}
+                  className="flex items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-left transition-colors"
+                >
+                  <Cloud className="w-4 h-4 text-cyan-400" />
+                  <span className="text-sm text-gray-200">From cloud</span>
+                </button>
 
-        <motion.label
-          htmlFor="cloud-upload"
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-          className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col items-center gap-1.5 hover:bg-white/10 hover:border-white/20 transition-all"
-        >
-          <div className="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-            <Cloud className="w-4 h-4 text-cyan-400" />
-          </div>
-          <span className="text-xs text-gray-400 text-center leading-tight">Cloud</span>
-        </motion.label>
-      </div>
+                <button
+                  onClick={() => {
+                    setShowUrlInput(prev => !prev);
+                    setUrlError('');
+                    setUrlNote('');
+                  }}
+                  className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-colors ${
+                    showUrlInput
+                      ? 'bg-emerald-500/15 border-emerald-500/40'
+                      : 'bg-white/5 hover:bg-white/10 border-white/10'
+                  }`}
+                >
+                  <Globe className="w-4 h-4 text-emerald-400" />
+                  <span className="text-sm text-gray-200">From internet URL</span>
+                </button>
+              </div>
+
+              <AnimatePresence>
+                {showUrlInput && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden mt-3"
+                  >
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <button
+                          onClick={() => setUrlType('audio')}
+                          className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
+                            urlType === 'audio'
+                              ? 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                              : 'bg-white/5 border-white/10 text-gray-400'
+                          }`}
+                        >
+                          Audio
+                        </button>
+                        <button
+                          onClick={() => setUrlType('video')}
+                          className={`px-2.5 py-1 rounded-lg text-xs border transition-colors ${
+                            urlType === 'video'
+                              ? 'bg-pink-500/20 border-pink-500/40 text-pink-300'
+                              : 'bg-white/5 border-white/10 text-gray-400'
+                          }`}
+                        >
+                          Video
+                        </button>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={urlValue}
+                          onChange={e => {
+                            setUrlValue(e.target.value);
+                            setUrlError('');
+                            setUrlNote('');
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              void handleAddUrl();
+                            }
+                          }}
+                          placeholder="Paste direct file URL or page URL"
+                          className="flex-1 bg-transparent text-white text-sm placeholder-gray-500 outline-none border border-white/10 rounded-lg px-3 py-2"
+                        />
+                        <button
+                          onClick={() => {
+                            void handleAddUrl();
+                          }}
+                          disabled={urlLoading}
+                          className="px-3 py-2 rounded-lg text-sm font-semibold bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-60"
+                        >
+                          {urlLoading ? 'Adding...' : 'Add'}
+                        </button>
+                      </div>
+
+                      {urlError && <p className="text-xs text-red-300 mt-2">{urlError}</p>}
+                      {urlNote && <p className="text-xs text-emerald-200/90 mt-2">{urlNote}</p>}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         {current && (
           <motion.div
             key={current.id}
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: 0.25 }}
-            className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5 mb-5"
+            className="bg-gradient-to-br from-white/10 via-white/5 to-cyan-500/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 mb-5"
           >
-            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t.player.nowPlaying}</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-xs text-gray-500 uppercase tracking-wider">{t.player.nowPlaying}</p>
+              <span
+                className={`px-1.5 py-0.5 rounded-md text-[10px] border ${
+                  current.url && !current.objectUrl
+                    ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10'
+                    : 'text-blue-300 border-blue-500/40 bg-blue-500/10'
+                }`}
+              >
+                {current.url && !current.objectUrl ? 'WEB' : 'FILE'}
+              </span>
+            </div>
             <p className="text-white font-semibold truncate mb-3">{current.title}</p>
 
             {current.type === 'video' && (
@@ -566,27 +924,19 @@ export default function MediaPlayerView() {
                 key={current.id}
                 ref={setVideoRef}
                 playsInline
-                className="w-full rounded-2xl mb-3 max-h-52 object-contain bg-black"
+                className="w-full rounded-2xl mb-3 max-h-56 object-contain bg-black"
               />
             )}
 
-            {current.type === 'audio' && isPlaying && (
+            {current.type === 'audio' && (
               <div className="flex items-end justify-center gap-0.5 h-8 mb-3">
                 {Array.from({ length: 24 }).map((_, i) => (
                   <motion.div
                     key={i}
-                    className="w-1 rounded-full bg-blue-500/70"
-                    animate={{ height: ['20%', `${30 + Math.random() * 70}%`, '20%'] }}
-                    transition={{ duration: 0.4 + Math.random() * 0.4, repeat: Infinity, delay: i * 0.04 }}
+                    className={`w-1 rounded-full ${isPlaying ? 'bg-cyan-400/80' : 'bg-white/10'}`}
+                    animate={isPlaying ? { height: ['20%', `${30 + Math.random() * 70}%`, '20%'] } : { height: '20%' }}
+                    transition={{ duration: 0.4 + Math.random() * 0.4, repeat: isPlaying ? Infinity : 0, delay: i * 0.03 }}
                   />
-                ))}
-              </div>
-            )}
-
-            {current.type === 'audio' && !isPlaying && (
-              <div className="flex items-end justify-center gap-0.5 h-8 mb-3">
-                {Array.from({ length: 24 }).map((_, i) => (
-                  <div key={i} className="w-1 rounded-full bg-white/10" style={{ height: '20%' }} />
                 ))}
               </div>
             )}
@@ -600,7 +950,7 @@ export default function MediaPlayerView() {
                 step="0.1"
                 value={progress}
                 onChange={handleSeek}
-                className="flex-1 accent-blue-500"
+                className="flex-1 accent-cyan-500"
                 style={{ height: '4px' }}
               />
               <span className="text-xs text-gray-500 tabular-nums w-9 text-right">{formatTime(duration)}</span>
@@ -615,7 +965,7 @@ export default function MediaPlayerView() {
                 <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={togglePlay}
-                  className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/40"
+                  className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/30"
                 >
                   {isPlaying ? (
                     <Pause className="w-5 h-5 text-white" />
@@ -630,6 +980,28 @@ export default function MediaPlayerView() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShuffleEnabled(prev => !prev)}
+                  className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-colors ${
+                    shuffleEnabled
+                      ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
+                      : 'bg-white/5 border-white/10 text-gray-500 hover:text-white'
+                  }`}
+                >
+                  <Shuffle className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={cycleRepeatMode}
+                  className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-colors ${
+                    repeatMode === 'off'
+                      ? 'bg-white/5 border-white/10 text-gray-500 hover:text-white'
+                      : 'bg-blue-500/20 border-blue-500/40 text-blue-300'
+                  }`}
+                >
+                  {repeatMode === 'one' ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
+                </button>
+
                 <Volume2 className="w-4 h-4 text-gray-500" />
                 <input
                   type="range"
@@ -637,7 +1009,7 @@ export default function MediaPlayerView() {
                   max="100"
                   value={volume}
                   onChange={e => handleVolumeChange(Number(e.target.value))}
-                  className="w-16 accent-blue-500"
+                  className="w-16 accent-cyan-500"
                 />
               </div>
             </div>
@@ -654,7 +1026,7 @@ export default function MediaPlayerView() {
 
         {loading ? (
           <div className="flex justify-center py-8">
-            <div className="w-6 h-6 border-2 border-white/20 border-t-blue-500 rounded-full animate-spin" />
+            <div className="w-6 h-6 border-2 border-white/20 border-t-cyan-500 rounded-full animate-spin" />
           </div>
         ) : entries.length === 0 ? (
           <motion.div
@@ -702,7 +1074,7 @@ export default function MediaPlayerView() {
                           transition={{ delay: idx * 0.02 }}
                           className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer group ${
                             currentId === entry.id
-                              ? 'bg-blue-500/10 border-blue-500/30'
+                              ? 'bg-cyan-500/10 border-cyan-500/30'
                               : 'bg-white/5 border-white/10 hover:bg-white/10'
                           }`}
                           onClick={() => selectTrack(entry.id)}
@@ -722,20 +1094,25 @@ export default function MediaPlayerView() {
 
                             {currentId === entry.id && isPlaying && (
                               <motion.div
-                                className="absolute inset-0 rounded-lg border-2 border-blue-400"
+                                className="absolute inset-0 rounded-lg border-2 border-cyan-400"
                                 animate={{ opacity: [1, 0.3, 1] }}
                                 transition={{ duration: 1.5, repeat: Infinity }}
                               />
                             )}
                           </div>
 
-                          <span
-                            className={`flex-1 text-sm truncate ${
-                              currentId === entry.id ? 'text-white font-medium' : 'text-gray-300'
-                            }`}
-                          >
-                            {entry.title}
-                          </span>
+                          <div className="min-w-0 flex-1">
+                            <span
+                              className={`block text-sm truncate ${
+                                currentId === entry.id ? 'text-white font-medium' : 'text-gray-300'
+                              }`}
+                            >
+                              {entry.title}
+                            </span>
+                            <span className="block text-[10px] text-gray-500">
+                              {entry.url && !entry.objectUrl ? 'Web link' : 'Local file'}
+                            </span>
+                          </div>
 
                           <button
                             onClick={e => {
