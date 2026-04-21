@@ -47,10 +47,6 @@ const GROUP_LABELS: Record<PlayableMediaType, string> = {
   video: 'Video',
 };
 
-const SUPPORTED_HINT =
-  'MP3, WAV, OGG, AAC, M4A, MP4, WEBM, MOV, MKV - device, cloud, or direct web link';
-const CLOUD_HINT =
-  'Cloud source opens iOS/Android/Desktop file picker: iCloud Drive, Google Drive, Dropbox, OneDrive.';
 const EMPTY_HINT = 'No media yet. Add audio or video and start playback.';
 
 function isPlayableType(type: MediaSourceType): type is PlayableMediaType {
@@ -186,6 +182,94 @@ async function findEmbeddedMediaUrl(pageUrl: string): Promise<{ url: string; typ
   return null;
 }
 
+function buildAllOriginsRawUrl(url: string): string {
+  return `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+}
+
+function probePlayableUrl(url: string, type: 'audio' | 'video', timeoutMs = 10000): Promise<boolean> {
+  if (typeof document === 'undefined') return Promise.resolve(true);
+
+  return new Promise(resolve => {
+    const el = document.createElement(type);
+    let settled = false;
+
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      el.oncanplay = null;
+      el.onloadedmetadata = null;
+      el.onerror = null;
+      el.removeAttribute('src');
+      el.load();
+      resolve(ok);
+    };
+
+    const timer = window.setTimeout(() => finish(false), timeoutMs);
+
+    el.preload = 'metadata';
+    el.oncanplay = () => finish(true);
+    el.onloadedmetadata = () => finish(true);
+    el.onerror = () => finish(false);
+
+    try {
+      el.src = url;
+      el.load();
+    } catch {
+      finish(false);
+    }
+  });
+}
+
+async function resolvePlayableWebSource(
+  inputUrl: string,
+  preferredType: PlayableMediaType
+): Promise<{ url: string; type: PlayableMediaType; note?: string } | null> {
+  const candidates: Array<{ url: string; hintType?: PlayableMediaType; note?: string }> = [];
+  const seen = new Set<string>();
+
+  const pushCandidate = (url: string, hintType?: PlayableMediaType, note?: string) => {
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    candidates.push({ url, hintType, note });
+  };
+
+  const normalized = normalizeCloudShareUrl(inputUrl);
+  pushCandidate(normalized, detectUrlMediaTypeByExt(normalized) ?? undefined);
+  pushCandidate(
+    buildAllOriginsRawUrl(normalized),
+    detectUrlMediaTypeByExt(normalized) ?? undefined,
+    'The original host blocks playback, so compatibility proxy is used.'
+  );
+
+  const embedded = await findEmbeddedMediaUrl(inputUrl);
+  if (embedded) {
+    const embeddedUrl = normalizeCloudShareUrl(embedded.url);
+    pushCandidate(embeddedUrl, embedded.type);
+    pushCandidate(
+      buildAllOriginsRawUrl(embeddedUrl),
+      embedded.type,
+      'Embedded media is opened through compatibility proxy.'
+    );
+  }
+
+  for (const candidate of candidates) {
+    const detected = candidate.hintType ?? (await detectUrlMediaType(candidate.url));
+    const probeOrder: PlayableMediaType[] = detected
+      ? [detected, detected === 'audio' ? 'video' : 'audio']
+      : [preferredType, preferredType === 'audio' ? 'video' : 'audio'];
+
+    for (const type of probeOrder) {
+      const ok = await probePlayableUrl(candidate.url, type);
+      if (ok) {
+        return { url: candidate.url, type, note: candidate.note };
+      }
+    }
+  }
+
+  return null;
+}
+
 function inferTitleFromUrl(url: string): string {
   try {
     const parsed = new URL(url);
@@ -247,6 +331,20 @@ export default function MediaPlayerView() {
   repeatModeRef.current = repeatMode;
 
   const current = entries.find(entry => entry.id === currentId) ?? null;
+
+  const reportCurrentPlaybackError = useCallback(() => {
+    const cid = currentIdRef.current;
+    if (!cid) return;
+
+    const currentEntry = entriesRef.current.find(entry => entry.id === cid);
+    if (!currentEntry) return;
+
+    if (currentEntry.url && !currentEntry.objectUrl) {
+      setFileError('Web link is blocked by source site. Use a direct media file URL (.mp3/.mp4/.webm).');
+    } else {
+      setFileError('This file cannot be played on this device.');
+    }
+  }, []);
 
   const stopNativeMedia = useCallback(() => {
     if (audioEl.current) {
@@ -365,7 +463,10 @@ export default function MediaPlayerView() {
     el.onplay = () => setIsPlaying(true);
     el.onpause = () => setIsPlaying(false);
     el.onended = () => handleTrackEnded(el);
-    el.onerror = () => setIsPlaying(false);
+    el.onerror = () => {
+      setIsPlaying(false);
+      reportCurrentPlaybackError();
+    };
 
     return () => {
       el.ontimeupdate = null;
@@ -375,7 +476,7 @@ export default function MediaPlayerView() {
       el.onended = null;
       el.onerror = null;
     };
-  }, [handleTrackEnded]);
+  }, [handleTrackEnded, reportCurrentPlaybackError]);
 
   const setVideoRef = useCallback(
     (el: HTMLVideoElement | null) => {
@@ -390,9 +491,12 @@ export default function MediaPlayerView() {
       el.onplay = () => setIsPlaying(true);
       el.onpause = () => setIsPlaying(false);
       el.onended = () => handleTrackEnded(el);
-      el.onerror = () => setIsPlaying(false);
+      el.onerror = () => {
+        setIsPlaying(false);
+        reportCurrentPlaybackError();
+      };
     },
-    [handleTrackEnded]
+    [handleTrackEnded, reportCurrentPlaybackError]
   );
 
   useEffect(() => {
@@ -540,21 +644,23 @@ export default function MediaPlayerView() {
     setUrlNote('');
     setUrlLoading(true);
 
-    let finalUrl = normalizeCloudShareUrl(parsed.toString());
-    let finalType = await detectUrlMediaType(finalUrl);
-
-    if (!finalType) {
-      const embedded = await findEmbeddedMediaUrl(parsed.toString());
-      if (embedded) {
-        finalUrl = normalizeCloudShareUrl(embedded.url);
-        finalType = embedded.type;
-      }
+    let resolved: { url: string; type: PlayableMediaType; note?: string } | null = null;
+    try {
+      resolved = await resolvePlayableWebSource(parsed.toString(), urlType);
+    } catch {
+      setUrlLoading(false);
+      setUrlError('Could not open this link right now. Try again or use another URL.');
+      return;
     }
 
-    if (!finalType) {
-      finalType = urlType;
-      setUrlNote('Link added as selected type. If it does not play, use a direct media file URL.');
+    if (!resolved) {
+      setUrlLoading(false);
+      setUrlError('This link is not directly playable. Use a direct media file URL (.mp3/.mp4/.webm).');
+      return;
     }
+
+    const finalUrl = resolved.url;
+    const finalType = resolved.type;
 
     const id = `${finalType}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const item: StoredMedia = {
@@ -571,15 +677,17 @@ export default function MediaPlayerView() {
     }
 
     setEntries(prev => [...prev, item]);
-    if (!currentIdRef.current) {
-      setCurrentId(id);
-      currentIdRef.current = id;
-    }
+    setCurrentId(id);
+    currentIdRef.current = id;
+    setCurrentTime(0);
+    setDuration(0);
+    setIsPlaying(false);
 
     setUrlLoading(false);
     setIsAddOpen(false);
     setShowUrlInput(false);
     setUrlValue('');
+    setFileError(resolved.note ?? '');
   }, [urlLoading, urlValue, urlType]);
 
   const togglePlay = useCallback(() => {
@@ -708,8 +816,6 @@ export default function MediaPlayerView() {
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-white mb-1">{t.player.title}</h1>
-            <p className="text-gray-400 text-sm">{SUPPORTED_HINT}</p>
-            <p className="text-gray-500 text-xs mt-1">{CLOUD_HINT}</p>
           </div>
 
           <motion.button
