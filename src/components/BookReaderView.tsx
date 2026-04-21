@@ -13,8 +13,8 @@ interface Book {
   totalPages: number;
 }
 
-const BOOKS_STORAGE_KEY = 'reader_books_v3';
-const SUPPORTED_READABLE_EXTS = new Set(['txt', 'fb2']);
+const BOOKS_STORAGE_KEY = 'reader_books_v4';
+const SUPPORTED_READABLE_EXTS = new Set(['txt', 'fb2', 'epub', 'pdf']);
 
 function loadStoredBooks(): Book[] {
   if (typeof window === 'undefined') return [];
@@ -59,7 +59,7 @@ function decodeTextBuffer(buf: ArrayBuffer): string {
         bestText = decoded;
       }
     } catch {
-      // Skip unavailable encoding and continue.
+      // Skip unavailable encoding.
     }
   }
 
@@ -108,6 +108,64 @@ function parseFb2Content(xmlText: string): string {
   }
 }
 
+async function parsePdfContent(file: File): Promise<string> {
+  const pdfjs = (await import('pdfjs-dist/legacy/build/pdf')) as any;
+  const data = new Uint8Array(await file.arrayBuffer());
+  const loadingTask = pdfjs.getDocument({ data, disableWorker: true });
+  const pdf = await loadingTask.promise;
+
+  const pages: string[] = [];
+  for (let pageIndex = 1; pageIndex <= pdf.numPages; pageIndex += 1) {
+    const page = await pdf.getPage(pageIndex);
+    const text = await page.getTextContent();
+    const pageText = (text.items as Array<{ str?: string }>)
+      .map(item => item.str ?? '')
+      .join(' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    if (pageText) pages.push(pageText);
+  }
+
+  return normalizeText(pages.join('\n\n'));
+}
+
+async function parseEpubContent(file: File): Promise<string> {
+  const epubModule = (await import('epubjs')) as any;
+  const createBook = epubModule.default ?? epubModule;
+  const buffer = await file.arrayBuffer();
+  const book = createBook(buffer);
+
+  try {
+    await book.ready;
+    await book.loaded.spine;
+    const items = book.spine?.spineItems ?? [];
+    const chunks: string[] = [];
+
+    for (const section of items) {
+      try {
+        const loaded = await section.load(book.load.bind(book));
+        const sectionDoc = section.document ?? loaded;
+        const text = normalizeText(
+          sectionDoc?.body?.textContent ??
+            sectionDoc?.textContent ??
+            (typeof loaded === 'string' ? stripXmlTags(loaded) : '')
+        );
+        if (text) chunks.push(text);
+      } finally {
+        if (typeof section.unload === 'function') {
+          section.unload();
+        }
+      }
+    }
+
+    return normalizeText(chunks.join('\n\n'));
+  } finally {
+    if (typeof book.destroy === 'function') {
+      book.destroy();
+    }
+  }
+}
+
 function charsPerPage(fontSize: number): number {
   const safeFont = Math.min(32, Math.max(12, fontSize));
   const base = 2600;
@@ -145,31 +203,50 @@ async function parseBookFile(file: File): Promise<{ content: string; type: strin
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
   const upperType = ext.toUpperCase() || 'TXT';
 
+  if (ext === 'mobi') {
+    return {
+      content: '',
+      type: upperType,
+      error: 'MOBI напряму не підтримується. Конвертуйте MOBI у EPUB або TXT.',
+    };
+  }
+
   if (!SUPPORTED_READABLE_EXTS.has(ext)) {
     return {
       content: '',
       type: upperType,
-      error: 'Поки підтримуються TXT та FB2. Для EPUB/PDF/MOBI зробіть експорт у TXT.',
+      error: 'Непідтримуваний формат файлу.',
     };
   }
 
-  const buffer = await file.arrayBuffer();
-  const decoded = decodeTextBuffer(buffer);
-
-  if (ext === 'fb2') {
-    const parsed = parseFb2Content(decoded);
-    if (!parsed) {
-      return { content: '', type: upperType, error: 'Не вдалося прочитати FB2-файл.' };
+  try {
+    if (ext === 'pdf') {
+      const pdfText = await parsePdfContent(file);
+      if (!pdfText) return { content: '', type: upperType, error: 'Не вдалося витягнути текст із PDF.' };
+      return { content: pdfText, type: upperType };
     }
-    return { content: parsed, type: upperType };
-  }
 
-  const plain = normalizeText(decoded);
-  if (!plain) {
-    return { content: '', type: upperType, error: 'У файлі не знайдено текст.' };
-  }
+    if (ext === 'epub') {
+      const epubText = await parseEpubContent(file);
+      if (!epubText) return { content: '', type: upperType, error: 'Не вдалося витягнути текст із EPUB.' };
+      return { content: epubText, type: upperType };
+    }
 
-  return { content: plain, type: upperType };
+    const buffer = await file.arrayBuffer();
+    const decoded = decodeTextBuffer(buffer);
+
+    if (ext === 'fb2') {
+      const parsed = parseFb2Content(decoded);
+      if (!parsed) return { content: '', type: upperType, error: 'Не вдалося прочитати FB2-файл.' };
+      return { content: parsed, type: upperType };
+    }
+
+    const plain = normalizeText(decoded);
+    if (!plain) return { content: '', type: upperType, error: 'У файлі не знайдено текст.' };
+    return { content: plain, type: upperType };
+  } catch {
+    return { content: '', type: upperType, error: 'Помилка під час читання файлу.' };
+  }
 }
 
 export default function BookReaderView() {
@@ -222,7 +299,6 @@ export default function BookReaderView() {
       const parsed = await parseBookFile(file);
       if (parsed.error) {
         setImportError(parsed.error);
-        setIsImporting(false);
         return;
       }
 
@@ -239,8 +315,6 @@ export default function BookReaderView() {
       const updated = [book, ...books];
       saveBooks(updated);
       setCurrentBookId(book.id);
-    } catch {
-      setImportError('Не вдалося відкрити файл.');
     } finally {
       setIsImporting(false);
     }
@@ -368,7 +442,7 @@ export default function BookReaderView() {
           )}
         </div>
         <span className="text-white font-medium">{isImporting ? 'Імпорт...' : t.reader.upload}</span>
-        <span className="text-xs text-gray-500">TXT, FB2 (EPUB/PDF/MOBI через конвертацію в TXT)</span>
+        <span className="text-xs text-gray-500">TXT, FB2, EPUB, PDF</span>
       </motion.button>
 
       {importError && (
