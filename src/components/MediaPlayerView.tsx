@@ -75,11 +75,6 @@ function canPlayLocalFile(file: File, type: 'audio' | 'video'): boolean {
   return detectUrlMediaTypeByExt(file.name) === type;
 }
 
-function isIOSDevice(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return /iphone|ipad|ipod/i.test(navigator.userAgent);
-}
-
 function getInitialVolume(): number {
   if (typeof window === 'undefined') return 80;
   const raw = window.localStorage.getItem(VOLUME_STORAGE_KEY);
@@ -118,8 +113,6 @@ export default function MediaPlayerView() {
   const volumeRef = useRef<number>(volume);
   const shuffleRef = useRef<boolean>(shuffleEnabled);
   const repeatModeRef = useRef<RepeatMode>(repeatMode);
-
-  const isIOS = isIOSDevice();
 
   entriesRef.current = entries;
   currentIdRef.current = currentId;
@@ -342,9 +335,9 @@ export default function MediaPlayerView() {
     async (files: File[], kind: UploadKind) => {
       if (files.length === 0) return;
 
-      const persistBlobs = !isIOS;
       const newEntries: MediaEntry[] = [];
       let skipped = 0;
+      let notPersisted = 0;
 
       for (const file of files) {
         const fallback = kind === 'mixed' ? undefined : kind;
@@ -356,29 +349,30 @@ export default function MediaPlayerView() {
 
         const id = `${actualType}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
         const objectUrl = URL.createObjectURL(file);
+        const blobToStore = file.slice(0, file.size, file.type || undefined);
         const item: StoredMedia = {
           id,
           title: file.name.replace(/\.[^/.]+$/, ''),
           type: actualType,
-          ...(persistBlobs ? { blob: file } : {}),
+          blob: blobToStore,
         };
 
-        if (persistBlobs) {
-          try {
-            await saveMedia(item);
-          } catch (error) {
-            console.error('Failed to save media to IndexedDB:', error);
-          }
+        try {
+          await saveMedia(item);
+        } catch (error) {
+          notPersisted += 1;
+          console.error('Failed to save media to IndexedDB:', error);
         }
 
         newEntries.push({ ...item, objectUrl });
       }
 
-      if (skipped > 0) {
-        setFileError(`Could not play ${skipped} file(s) on this device.`);
-      } else {
-        setFileError('');
+      const errors: string[] = [];
+      if (skipped > 0) errors.push(`Could not play ${skipped} file(s) on this device.`);
+      if (notPersisted > 0) {
+        errors.push(`${notPersisted} file(s) will play now, but may disappear after reload.`);
       }
+      setFileError(errors.join(' '));
 
       if (newEntries.length === 0) return;
 
@@ -393,7 +387,7 @@ export default function MediaPlayerView() {
         setDuration(0);
       }
     },
-    [isIOS]
+    []
   );
 
   const handleLocalUpload = useCallback(
