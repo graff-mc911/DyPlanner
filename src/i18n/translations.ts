@@ -102,6 +102,14 @@ export interface Translations {
     doLose: string;
     dontLose: string;
     cardPlaceholder: string;
+    analysisTitle: string;
+    analysisFillAll: string;
+    verdictDo: string;
+    verdictDont: string;
+    verdictUnclear: string;
+    reasonsFor: string;
+    reasonsAgainst: string;
+    clear: string;
   };
   player: {
     title: string;
@@ -206,6 +214,14 @@ const enBase: Translations = {
     doLose: 'What do I lose if I do this?',
     dontLose: "What do I lose if I don't?",
     cardPlaceholder: 'Write your thoughts...',
+    analysisTitle: 'Verdict',
+    analysisFillAll: 'Fill in all four quadrants to see the analysis.',
+    verdictDo: 'Do it',
+    verdictDont: "Don't do it",
+    verdictUnclear: 'Weigh carefully',
+    reasonsFor: 'Reasons for',
+    reasonsAgainst: 'Reasons against',
+    clear: 'Clear all',
   },
   player: {
     title: 'Media Player',
@@ -313,6 +329,14 @@ export const translations: Record<Language, Translations> = {
       doLose: '¿Qué pierdo si hago esto?',
       dontLose: '¿Qué pierdo si no lo hago?',
       cardPlaceholder: 'Escribe tus pensamientos...',
+      analysisTitle: 'Veredicto',
+      analysisFillAll: 'Rellena los cuatro cuadrantes para ver el análisis.',
+      verdictDo: 'Hazlo',
+      verdictDont: 'No lo hagas',
+      verdictUnclear: 'Pondera con cuidado',
+      reasonsFor: 'Razones a favor',
+      reasonsAgainst: 'Razones en contra',
+      clear: 'Borrar todo',
     },
     player: {
       title: 'Reproductor',
@@ -403,6 +427,14 @@ export const translations: Record<Language, Translations> = {
       doLose: 'Que perds-je si je fais cela?',
       dontLose: 'Que perds-je si je ne fais pas?',
       cardPlaceholder: 'Écrivez vos pensées...',
+      analysisTitle: 'Verdict',
+      analysisFillAll: 'Remplissez les quatre quadrants pour voir l\'analyse.',
+      verdictDo: 'Faites-le',
+      verdictDont: 'Ne le faites pas',
+      verdictUnclear: 'Pesez soigneusement',
+      reasonsFor: 'Raisons pour',
+      reasonsAgainst: 'Raisons contre',
+      clear: 'Tout effacer',
     },
     player: {
       title: 'Lecteur Média',
@@ -493,6 +525,14 @@ export const translations: Record<Language, Translations> = {
       doLose: 'Was verliere ich, wenn ich das tue?',
       dontLose: 'Was verliere ich, wenn ich es nicht tue?',
       cardPlaceholder: 'Schreibe deine Gedanken...',
+      analysisTitle: 'Ergebnis',
+      analysisFillAll: 'Füllen Sie alle vier Quadranten aus, um die Analyse zu sehen.',
+      verdictDo: 'Tu es',
+      verdictDont: 'Tu es nicht',
+      verdictUnclear: 'Sorgfältig abwägen',
+      reasonsFor: 'Gründe dafür',
+      reasonsAgainst: 'Gründe dagegen',
+      clear: 'Alles löschen',
     },
     player: {
       title: 'Media Player',
@@ -583,6 +623,14 @@ export const translations: Record<Language, Translations> = {
       doLose: 'Що я втрачу, якщо зроблю?',
       dontLose: 'Що я втрачу, якщо не зроблю?',
       cardPlaceholder: 'Напиши свої думки...',
+      analysisTitle: 'Вердикт',
+      analysisFillAll: 'Заповніть усі чотири квадранти, щоб побачити аналіз.',
+      verdictDo: 'Зроби це',
+      verdictDont: 'Не роби цього',
+      verdictUnclear: 'Зваж уважно',
+      reasonsFor: 'Причини за',
+      reasonsAgainst: 'Причини проти',
+      clear: 'Очистити все',
     },
     player: {
       title: 'Медіа-плеєр',
@@ -673,6 +721,14 @@ export const translations: Record<Language, Translations> = {
       doLose: 'O que perco se eu fizer isso?',
       dontLose: 'O que perco se eu não fizer?',
       cardPlaceholder: 'Escreva seus pensamentos...',
+      analysisTitle: 'Veredicto',
+      analysisFillAll: 'Preencha os quatro quadrantes para ver a análise.',
+      verdictDo: 'Faça',
+      verdictDont: 'Não faça',
+      verdictUnclear: 'Pondere com cuidado',
+      reasonsFor: 'Razões a favor',
+      reasonsAgainst: 'Razões contra',
+      clear: 'Limpar tudo',
     },
     player: {
       title: 'Player de Mídia',
@@ -763,6 +819,14 @@ export const translations: Record<Language, Translations> = {
       doLose: 'Cosa perdo se lo faccio?',
       dontLose: 'Cosa perdo se non lo faccio?',
       cardPlaceholder: 'Scrivi i tuoi pensieri...',
+      analysisTitle: 'Verdetto',
+      analysisFillAll: 'Compila tutti e quattro i quadranti per vedere l\'analisi.',
+      verdictDo: 'Fallo',
+      verdictDont: 'Non farlo',
+      verdictUnclear: 'Valuta attentamente',
+      reasonsFor: 'Ragioni a favore',
+      reasonsAgainst: 'Ragioni contro',
+      clear: 'Cancella tutto',
     },
     player: {
       title: 'Lettore Multimediale',
@@ -853,6 +917,14 @@ export const translations: Record<Language, Translations> = {
       doLose: 'Co stracę, jeśli to zrobię?',
       dontLose: 'Co stracę, jeśli tego nie zrobię?',
       cardPlaceholder: 'Napisz swoje myśli...',
+      analysisTitle: 'Werdykt',
+      analysisFillAll: 'Wypełnij wszystkie cztery ćwiartki, aby zobaczyć analizę.',
+      verdictDo: 'Zrób to',
+      verdictDont: 'Nie rób tego',
+      verdictUnclear: 'Rozważ ostrożnie',
+      reasonsFor: 'Powody za',
+      reasonsAgainst: 'Powody przeciw',
+      clear: 'Wyczyść wszystko',
     },
     player: {
       title: 'Odtwarzacz',
@@ -943,6 +1015,14 @@ export const translations: Record<Language, Translations> = {
       doLose: 'Что я потеряю, если сделаю это?',
       dontLose: 'Что я потеряю, если не сделаю?',
       cardPlaceholder: 'Напишите свои мысли...',
+      analysisTitle: 'Вердикт',
+      analysisFillAll: 'Заполните все четыре квадранта, чтобы увидеть анализ.',
+      verdictDo: 'Сделай это',
+      verdictDont: 'Не делай этого',
+      verdictUnclear: 'Взвесь внимательно',
+      reasonsFor: 'Причины за',
+      reasonsAgainst: 'Причины против',
+      clear: 'Очистить всё',
     },
     player: {
       title: 'Медиа-плеер',
@@ -1033,6 +1113,14 @@ export const translations: Record<Language, Translations> = {
       doLose: '如果我这样做会失去什么？',
       dontLose: '如果我不这样做会失去什么？',
       cardPlaceholder: '写下你的想法...',
+      analysisTitle: '判定',
+      analysisFillAll: '填写所有四个象限以查看分析。',
+      verdictDo: '去做',
+      verdictDont: '不要做',
+      verdictUnclear: '仔细权衡',
+      reasonsFor: '赞成的理由',
+      reasonsAgainst: '反对的理由',
+      clear: '全部清除',
     },
     player: {
       title: '媒体播放器',
