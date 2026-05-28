@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Timer, CheckSquare, Flame, HelpCircle, Music, BookOpen, Settings } from 'lucide-react'
+import { Timer, CheckSquare, Flame, HelpCircle, Music, BookOpen, Settings, Languages } from 'lucide-react'
 import WelcomeScreen from './components/WelcomeScreen'
 import FocusTimer from './components/FocusTimer'
 import DailyPlanner from './components/DailyPlanner'
@@ -8,9 +8,10 @@ import DecisionTool from './components/DecisionTool'
 import MediaPlayerView from './components/MediaPlayerView'
 import BookReaderView from './components/BookReaderView'
 import SettingsView from './components/SettingsView'
+import SpanishLearn from './components/SpanishLearn'
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext'
 
-type Tab = 'focus' | 'tasks' | 'habits' | 'decide' | 'player' | 'reader' | 'settings'
+type Tab = 'focus' | 'tasks' | 'habits' | 'decide' | 'player' | 'reader' | 'spanish' | 'settings'
 type AppTheme = 'dark' | 'light'
 
 function AppContent() {
@@ -40,6 +41,7 @@ function AppContent() {
     { id: 'decide', icon: <HelpCircle className="w-5 h-5" />, label: t.tabs.decide },
     { id: 'player', icon: <Music className="w-5 h-5" />, label: t.tabs.player },
     { id: 'reader', icon: <BookOpen className="w-5 h-5" />, label: t.tabs.reader },
+    { id: 'spanish', icon: <Languages className="w-5 h-5" />, label: 'Español' },
     { id: 'settings', icon: <Settings className="w-5 h-5" />, label: t.tabs.settings },
   ]
 
@@ -56,6 +58,7 @@ function AppContent() {
         {activeTab === 'decide' && <DecisionTool />}
         {activeTab === 'player' && <MediaPlayerView />}
         {activeTab === 'reader' && <BookReaderView />}
+        {activeTab === 'spanish' && <SpanishLearn />}
         {activeTab === 'settings' && <SettingsView theme={theme} onThemeChange={handleThemeChange} />}
       </div>
 
